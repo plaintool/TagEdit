@@ -6,10 +6,3 @@
 *.mo
 *.tar.gz
 packages/lib
-/installer/debsetup/*.deb
-/installer/debsetup/DATA/usr/bin/notetask
-/installer/rpmsetup/*.rpm
-/installer/*.wixobj
-/installer/*.wixpdb
-/installer/*.pfx
-/installer/history/*

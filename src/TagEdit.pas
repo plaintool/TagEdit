@@ -8,77 +8,113 @@ uses
   Classes, SysUtils, Controls, StdCtrls, Graphics, Types, Forms, Dialogs, LCLType, LCLIntf;
 
 type
-  TTagClickEvent = procedure(Sender: TObject; const TagText: string) of object;
+  TTagEvent = procedure(Sender: TObject; const TagText: string) of object;
 
   TTagEdit = class(TCustomControl)
   private
     FTags: TStringList;
+    FTagRects: array of TRect;
+
     FEdit: TEdit;
     FTagColor: TColor;
     FTagBorderColor: TColor;
-    FTagBorderWidth: integer;
-    FTagHeight: integer;
-    FOnTagAdd: TNotifyEvent;
-    FOnTagRemove: TNotifyEvent;
-    FOnTagClick: TTagClickEvent;
     FBorderColor: TColor;
+    FTagHoverColor: TColor;
+
+    FTagBorderWidth: integer;
     FBorderWidth: integer;
+    FRoundCorners: integer;
     FDragIndex: integer;
     FDropIndex: integer;
     FDragging: boolean;
-    FTagRects: array of TRect;
     FUpdatingEdit: boolean;
     FEditMinWidth: integer;
-    FTagHoverColor: TColor;
     FHoverIndex: integer;
     FMouseDownPos: TPoint;
     FMouseDownIndex: integer;
     FRemoveConfirm: boolean;
     FRemoveConfirmMessage: string;
     FRemoveConfirmTitle: string;
+    FFont: TFont;
+    FParentFont: boolean;
+    FReadOnly: boolean;
+
+    FOnTagAdd: TTagEvent;
+    FOnTagRemove: TTagEvent;
+    FOnTagClick: TTagEvent;
+
     procedure EditKeyDown(Sender: TObject; var Key: word; Shift: TShiftState);
     procedure EditExit(Sender: TObject);
     function GetTags: TStringList;
     procedure SetTags(Value: TStringList);
+    procedure SetFont(Value: TFont);
+    procedure SetParentFont(Value: boolean);
+    procedure SetReadOnly(Value: boolean);
     procedure TagsChanged(Sender: TObject);
     procedure DrawTags;
+    function GetTagHeight: integer;
     function GetTagRect(Index: integer): TRect;
     function TagAtPos(const P: TPoint): integer;
     procedure UpdateEditPosition;
     procedure UpdateHoverState(X, Y: integer);
+    function CoalesceInt(const A, B: integer): integer;
   protected
     procedure Paint; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: integer); override;
     procedure MouseLeave; override;
+    property TagHeight: integer read GetTagHeight;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure AddTag(const ATag: string);
     procedure RemoveTag(const ATag: string);
     property EditBox: TEdit read FEdit;
+    procedure ParentFontChange(Sender: TObject);
+    procedure FontChanged(Sender: TObject); override;
+    procedure SetParent(AParent: TWinControl); override;
   published
     property Align;
-    property Color;
-    property Font;
+    property Anchors;
+    property Color default clWindow;
+    property Enabled;
+    property Visible;
+    property ShowHint;
+    property PopupMenu;
+    property Height default 30;
+    property Width default 300;
+    property Tag default 0;
+    property Font: TFont read FFont write SetFont;
     property TagColor: TColor read FTagColor write FTagColor default clBtnFace;
     property TagHoverColor: TColor read FTagHoverColor write FTagHoverColor default clSkyBlue;
-    property TagBorderColor: TColor read FTagBorderColor write FTagBorderColor default clBlack;
-    property TagBorderWidth: integer read FTagBorderWidth write FTagBorderWidth default 1;
-    property TagHeight: integer read FTagHeight write FTagHeight default 24;
+    property TagBorderColor: TColor read FTagBorderColor write FTagBorderColor default clWindowFrame;
+    property TagBorderWidth: integer read FTagBorderWidth write FTagBorderWidth default 0;
     property BorderColor: TColor read FBorderColor write FBorderColor default clWindowFrame;
     property BorderWidth: integer read FBorderWidth write FBorderWidth default 0;
+    property RoundCorners: integer read FRoundCorners write FRoundCorners default 5;
     property EditMinWidth: integer read FEditMinWidth write FEditMinWidth default 50;
     property RemoveConfirm: boolean read FRemoveConfirm write FRemoveConfirm default True;
     property RemoveConfirmTitle: string read FRemoveConfirmTitle write FRemoveConfirmTitle;
     property RemoveConfirmMessage: string read FRemoveConfirmMessage write FRemoveConfirmMessage;
+    property ParentFont: boolean read FParentFont write SetParentFont default True;
+    property ReadOnly: boolean read FReadOnly write SetReadOnly default False;
 
     property Tags: TStringList read GetTags write SetTags;
 
-    property OnTagAdd: TNotifyEvent read FOnTagAdd write FOnTagAdd;
-    property OnTagRemove: TNotifyEvent read FOnTagRemove write FOnTagRemove;
-    property OnTagClick: TTagClickEvent read FOnTagClick write FOnTagClick;
+    property OnTagAdd: TTagEvent read FOnTagAdd write FOnTagAdd;
+    property OnTagRemove: TTagEvent read FOnTagRemove write FOnTagRemove;
+    property OnTagClick: TTagEvent read FOnTagClick write FOnTagClick;
+    property OnClick;
+    property OnDblClick;
+    property OnMouseDown;
+    property OnMouseUp;
+    property OnMouseMove;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnKeyDown;
+    property OnKeyUp;
+    property OnKeyPress;
   end;
 
 implementation
@@ -88,27 +124,45 @@ implementation
 constructor TTagEdit.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  Height := 24;
-  Width := 240;
+  Height := 30;
+  Width := 300;
+  Tag := 0;
   Color := clWindow;
   ParentColor := False;
 
+  FReadOnly := False;
+  FFont := TFont.Create;
+  FFont.OnChange := @FontChanged;
+  FParentFont := True;
+
   FTags := TStringList.Create;
+  FTags.Add('Lazarus');
+  FTags.Add('Free Pascal');
+
   FTags.OnChange := @TagsChanged;
-  FTagHeight := 24;
+
   FTagColor := clBtnFace;
   FTagHoverColor := clSkyBlue;
+  FTagBorderColor := clWindowFrame;
+  FTagBorderWidth := 0;
+  FBorderColor := clWindowFrame;
   FEditMinWidth := 50;
+  FRoundCorners := 5;
 
   // Create inner edit control
   FEdit := TEdit.Create(Self);
-  FEdit.Parent := Self;
-  FEdit.BorderStyle := bsNone;
-  FEdit.OnKeyDown := @EditKeyDown;
-  FEdit.OnExit := @EditExit;
-  FEdit.Color := Color;
-  FEdit.Left := 4;
-  FEdit.Top := 4;
+  if not (csDesigning in ComponentState) then
+  begin
+    FEdit.Parent := Self;
+    FEdit.DoubleBuffered := True;
+    FEdit.ParentFont := True;
+    FEdit.BorderStyle := bsNone;
+    FEdit.OnKeyDown := @EditKeyDown;
+    FEdit.OnExit := @EditExit;
+    FEdit.Color := Color;
+    FEdit.Left := 4;
+    FEdit.Top := 4;
+  end;
 
   FRemoveConfirm := True;
   FRemoveConfirmMessage := 'Are you sure you want to remove tag';
@@ -125,6 +179,8 @@ end;
 destructor TTagEdit.Destroy;
 begin
   FTags.Free;
+  FFont.Free;
+  FEdit.Free;
   inherited Destroy;
 end;
 
@@ -139,52 +195,102 @@ begin
   Invalidate;
 end;
 
+procedure TTagEdit.SetFont(Value: TFont);
+begin
+  if Value <> nil then
+  begin
+    FFont.Assign(Value);
+    FEdit.Font.Assign(Value);
+    FParentFont := False;
+    Invalidate;
+  end;
+end;
+
+procedure TTagEdit.SetParent(AParent: TWinControl);
+begin
+  inherited SetParent(AParent);
+  if FParentFont and (AParent <> nil) then
+  begin
+    FFont.Assign(AParent.Font);
+    FEdit.Font.Assign(AParent.Font);
+    SetParentFont(True);
+  end;
+end;
+
+procedure TTagEdit.SetParentFont(Value: boolean);
+begin
+  FParentFont := Value;
+
+  if FParentFont and (Parent <> nil) then
+  begin
+    // Detach previous event
+    if Assigned(FFont.OnChange) then
+      FFont.OnChange := nil;
+
+    // Copy parent's font
+    FFont.Assign(Parent.Font);
+    FEdit.Font.Assign(Parent.Font);
+
+    // Subscribe to parent's font change manually
+    Parent.Font.OnChange := @ParentFontChange;
+
+    // Subscribe to font change
+    FFont.OnChange := @FontChanged;
+  end
+  else
+  begin
+    // Remove parent font change hook
+    if Assigned(Parent) then
+      Parent.Font.OnChange := nil;
+
+    // Copy font
+    FEdit.Font.Assign(FFont);
+
+    // Subscribe to font change
+    FFont.OnChange := @FontChanged;
+  end;
+end;
+
+procedure TTagEdit.ParentFontChange(Sender: TObject);
+begin
+  if FParentFont and (Parent <> nil) then
+  begin
+    FFont.Assign(Parent.Font);
+    FEdit.Font.Assign(Parent.Font);
+    Invalidate;
+  end;
+end;
+
+procedure TTagEdit.FontChanged(Sender: TObject);
+begin
+  inherited;
+  FEdit.Font.Assign(Font);
+  if (Assigned(Parent)) and (not FFont.IsEqual(Parent.Font)) then
+    FParentFont := False;
+  Invalidate;
+end;
+
+procedure TTagEdit.SetReadOnly(Value: boolean);
+begin
+  FReadOnly := Value;
+  FEdit.ReadOnly := Value;
+  Invalidate;
+end;
+
 procedure TTagEdit.TagsChanged(Sender: TObject);
 begin
   FHoverIndex := -1; // Reset hover state when tags change
   Invalidate;
 end;
 
-procedure TTagEdit.EditKeyDown(Sender: TObject; var Key: word; Shift: TShiftState);
-begin
-  // Enter adds a new tag
-  if Key = VK_RETURN then
-  begin
-    if FEdit.Text <> '' then
-    begin
-      AddTag(FEdit.Text);
-      FEdit.Text := '';
-    end;
-    Key := 0;
-  end;
-
-  // Backspace removes last tag if edit is empty
-  if (Key = VK_BACK) and (FEdit.Text = '') and (FTags.Count > 0) then
-  begin
-    FTags.Delete(FTags.Count - 1);
-    if Assigned(FOnTagRemove) then
-      FOnTagRemove(Self);
-    Invalidate;
-  end;
-end;
-
-procedure TTagEdit.EditExit(Sender: TObject);
-begin
-  // When leaving the edit, add tag if not empty
-  if FEdit.Text <> '' then
-  begin
-    AddTag(FEdit.Text);
-    FEdit.Text := '';
-  end;
-end;
-
 procedure TTagEdit.AddTag(const ATag: string);
 begin
-  if (ATag <> '') and (FTags.IndexOf(ATag) = -1) then
+  if (ATag <> string.Empty) and (FTags.IndexOf(ATag) = -1) then
   begin
     FTags.Add(ATag);
+    FEdit.Text := string.Empty;
     if Assigned(FOnTagAdd) then
-      FOnTagAdd(Self);
+      FOnTagAdd(Self, ATag);
     Invalidate;
   end;
 end;
@@ -198,9 +304,14 @@ begin
   begin
     FTags.Delete(i);
     if Assigned(FOnTagRemove) then
-      FOnTagRemove(Self);
+      FOnTagRemove(Self, ATag);
     Invalidate;
   end;
+end;
+
+function TTagEdit.GetTagHeight: integer;
+begin
+  Result := CoalesceInt(Font.Size, Screen.SystemFont.Size) * 2 + 5;
 end;
 
 function TTagEdit.GetTagRect(Index: integer): TRect;
@@ -261,10 +372,18 @@ begin
     FEdit.Width := ClientWidth - FEdit.Left - 4;
     if FEdit.Width < FEditMinWidth then
       FEdit.Width := FEditMinWidth;
-    FEdit.Height := FTagHeight;
+    FEdit.Height := TagHeight;
   finally
     FUpdatingEdit := False;
   end;
+end;
+
+function TTagEdit.CoalesceInt(const A, B: integer): integer;
+begin
+  if A <> 0 then
+    Result := A
+  else
+    Result := B;
 end;
 
 procedure TTagEdit.DrawTags;
@@ -272,7 +391,7 @@ var
   i: integer;
   R: TRect;
   s: string;
-  X, Y, W, H: integer;
+  X, Y, W, H, M: integer;
   AvailWidth: integer;
   CurrentTagColor: TColor;
 begin
@@ -286,12 +405,13 @@ begin
 
   X := 4;
   Y := 4;
-  H := FTagHeight;
+  H := TagHeight;
 
   for i := 0 to FTags.Count - 1 do
   begin
     s := FTags[i];
-    W := Canvas.TextWidth(s) + 24;
+    M := CoalesceInt(Font.Size, Screen.SystemFont.Size) * 2 + 6;
+    W := Canvas.TextWidth(s) + M;
 
     // Move to next line if tag doesn't fit
     if (X + W) > AvailWidth then
@@ -313,25 +433,30 @@ begin
     Canvas.Pen.Width := FTagBorderWidth;
     Canvas.Pen.Color := FTagBorderColor;
     Canvas.Brush.Color := CurrentTagColor;
-    if FTagBorderWidth = 0 then
+    if FTagBorderWidth <= 0 then
       Canvas.Pen.Style := psClear
     else
       Canvas.Pen.Style := psSolid;
 
-    Canvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom, 6, 6);
+    Canvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom, FRoundCorners, FRoundCorners);
 
     // Draw tag text
     Canvas.Font.Color := Font.Color;
     Canvas.TextOut(R.Left + 6, R.Top + 2, s);
 
     // Draw '×' button
-    Canvas.Font.Color := clGray;
-    Canvas.TextOut(R.Right - 12, R.Top + 2, '×');
+    if (not FReadOnly) then
+    begin
+      Canvas.Font.Color := clGray;
+      M := Round(CoalesceInt(Font.Size, Screen.SystemFont.Size) * 1.3) + 2;
+      Canvas.TextOut(R.Right - M, R.Top + 2, '×');
+    end;
 
     Inc(X, W + 4);
   end;
 
-  UpdateEditPosition;
+  if not (csDesigning in ComponentState) then
+    UpdateEditPosition;
 end;
 
 procedure TTagEdit.Paint;
@@ -355,7 +480,7 @@ begin
   DrawTags;
 
   // Draw drag indicator
-  if FDragging and (FDropIndex >= 0) and (FDropIndex <= FTags.Count) then
+  if not (csDesigning in ComponentState) and FDragging and (FDropIndex >= 0) and (FDropIndex <= FTags.Count) then
   begin
     Canvas.Pen.Width := 2;
     Canvas.Pen.Color := clHighlight;
@@ -376,7 +501,7 @@ begin
     begin
       // No tags - show indicator at start
       Canvas.MoveTo(2, 4);
-      Canvas.LineTo(2, 4 + FTagHeight);
+      Canvas.LineTo(2, 4 + TagHeight);
     end;
   end;
 end;
@@ -411,14 +536,36 @@ begin
   end;
 end;
 
-procedure TTagEdit.MouseLeave;
+procedure TTagEdit.EditKeyDown(Sender: TObject; var Key: word; Shift: TShiftState);
+var
+  ATag: string;
 begin
-  inherited;
-  if FHoverIndex <> -1 then
+  if csDesigning in ComponentState then exit;
+
+  // Enter adds a new tag
+  if Key = VK_RETURN then
   begin
-    FHoverIndex := -1;
+    if FEdit.Text <> string.Empty then
+      AddTag(FEdit.Text);
+    Key := 0;
+  end;
+
+  // Backspace removes last tag if edit is empty
+  if (Key = VK_BACK) and (FEdit.Text = string.Empty) and (FTags.Count > 0) then
+  begin
+    ATag := FTags[FTags.Count - 1];
+    FTags.Delete(FTags.Count - 1);
+    if Assigned(FOnTagRemove) then
+      FOnTagRemove(Self, ATag);
     Invalidate;
   end;
+end;
+
+procedure TTagEdit.EditExit(Sender: TObject);
+begin
+  // When leaving the edit, add tag if not empty
+  if FEdit.Text <> string.Empty then
+    AddTag(FEdit.Text);
 end;
 
 procedure TTagEdit.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: integer);
@@ -427,13 +574,15 @@ var
   R: TRect;
 begin
   inherited MouseDown(Button, Shift, X, Y);
+  if csDesigning in ComponentState then exit;
+
   if Button = mbLeft then
   begin
     idx := TagAtPos(Point(X, Y));
     FMouseDownIndex := idx;
     FMouseDownPos := Point(X, Y);
 
-    if idx >= 0 then
+    if (not FReadOnly) and (idx >= 0) then
     begin
       R := GetTagRect(idx);
       // Click near right edge removes the tag - do it immediately
@@ -461,13 +610,14 @@ var
   FoundInTag: boolean;
 begin
   inherited MouseMove(Shift, X, Y);
+  if csDesigning in ComponentState then exit;
 
   // Update hover state
   if not FDragging then
     UpdateHoverState(X, Y);
 
   // Start dragging only if mouse moved beyond threshold and we have a valid tag index
-  if not FDragging and (ssLeft in Shift) and (FMouseDownIndex >= 0) then
+  if not FReadOnly and not FDragging and (ssLeft in Shift) and (FMouseDownIndex >= 0) then
   begin
     DragThreshold := 5; // pixels
     if (Abs(X - FMouseDownPos.X) > DragThreshold) or (Abs(Y - FMouseDownPos.Y) > DragThreshold) then
@@ -507,7 +657,7 @@ begin
           R := GetTagRect(i);
 
           // Calculate distance to tag center
-          Distance := Abs(X - (R.Left + R.Width div 2)) + Abs(Y - (R.Top + R.Height div 2));
+          Distance := Abs(X - R.Left) + Abs(Y - (R.Top + R.Height div 2));
 
           if Distance < MinDistance then
           begin
@@ -544,6 +694,7 @@ var
   R: TRect;
 begin
   inherited MouseUp(Button, Shift, X, Y);
+  if csDesigning in ComponentState then exit;
 
   if Button = mbLeft then
   begin
@@ -588,6 +739,18 @@ begin
 
     // Reset mouse down state
     FMouseDownIndex := -1;
+  end;
+end;
+
+procedure TTagEdit.MouseLeave;
+begin
+  inherited MouseLeave;
+  if csDesigning in ComponentState then exit;
+
+  if FHoverIndex <> -1 then
+  begin
+    FHoverIndex := -1;
+    Invalidate;
   end;
 end;
 
