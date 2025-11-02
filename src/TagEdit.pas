@@ -59,7 +59,7 @@ type
     function TagAtPos(const P: TPoint): integer;
     procedure UpdateEditPosition;
     procedure UpdateHoverState(X, Y: integer);
-    function CoalesceInt(const A, B: integer): integer;
+    function CoalesceInt(const A, B: integer; const C: integer = 0): integer;
     procedure SetAutoSizeHeight(Value: boolean);
     procedure UpdateAutoHeight;
   protected
@@ -89,7 +89,7 @@ type
     property Visible;
     property ShowHint;
     property PopupMenu;
-    property Height default 30;
+    property Height default 32;
     property Width default 300;
     property Tag default 0;
     property Font: TFont read FFont write SetFont;
@@ -132,7 +132,7 @@ implementation
 constructor TTagEdit.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  Height := 30;
+  Height := 32;
   Width := 300;
   Tag := 0;
   Color := clWindow;
@@ -347,7 +347,7 @@ end;
 
 function TTagEdit.GetTagHeight: integer;
 begin
-  Result := CoalesceInt(Font.Size, Screen.SystemFont.Size) * 2 + 5;
+  Result := CoalesceInt(Font.Size, Screen.SystemFont.Size, 10) * 2 + 6;
 end;
 
 function TTagEdit.GetTagRect(Index: integer): TRect;
@@ -414,12 +414,15 @@ begin
   end;
 end;
 
-function TTagEdit.CoalesceInt(const A, B: integer): integer;
+function TTagEdit.CoalesceInt(const A, B: integer; const C: integer = 0): integer;
 begin
   if A <> 0 then
     Result := A
   else
-    Result := B;
+  if B <> 0 then
+    Result := B
+  else
+    Result := C;
 end;
 
 function TTagEdit.CalculateAutoHeight: integer;
@@ -453,7 +456,7 @@ begin
   // Simulate tag layout to find bottom position
   for I := 0 to FTags.Count - 1 do
   begin
-    W := Canvas.TextWidth(FTags[I]) + CoalesceInt(Font.Size, Screen.SystemFont.Size) * 2 + 6;
+    W := Canvas.TextWidth(FTags[I]) + TagHeight;
 
     // Wrap to next line if tag doesn't fit
     if (I > 0) and ((X + W) > AvailWidth) then
@@ -516,7 +519,7 @@ begin
   for i := 0 to FTags.Count - 1 do
   begin
     s := FTags[i];
-    M := CoalesceInt(Font.Size, Screen.SystemFont.Size) * 2 + 6;
+    M := TagHeight;
     W := Canvas.TextWidth(s) + M;
 
     // Move to next line if tag doesn't fit
@@ -555,7 +558,7 @@ begin
     if (not FReadOnly) then
     begin
       Canvas.Font.Color := clGray;
-      M := Round(CoalesceInt(Font.Size, Screen.SystemFont.Size) * 1.3) + 2;
+      M := Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 10) * 1.3) + 2;
       Canvas.TextOut(R.Right - M, R.Top + 2, '×');
     end;
 
