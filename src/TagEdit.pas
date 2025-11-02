@@ -296,6 +296,7 @@ end;
 procedure TTagEdit.ScaleFontsPPI(const AToPPI: integer; const AProportion: double);
 begin
   inherited ScaleFontsPPI(AToPPI, AProportion);
+  if FFont.Size = 0 then FFont.Size := CoalesceInt(Screen.SystemFont.Size, 8);
   DoScaleFontPPI(FFont, AToPPI, AProportion);
   if (Assigned(Parent)) and (FParentFont) then
     DoScaleFontPPI(Parent.Font, AToPPI, AProportion);
@@ -304,6 +305,7 @@ end;
 procedure TTagEdit.FixDesignFontsPPI(const ADesignTimePPI: integer);
 begin
   inherited FixDesignFontsPPI(ADesignTimePPI);
+  if FFont.Size = 0 then FFont.Size := CoalesceInt(Screen.SystemFont.Size, 8);
   DoFixDesignFontPPI(FFont, ADesignTimePPI);
   if (Assigned(Parent)) and (FParentFont) then
     DoFixDesignFontPPI(Parent.Font, ADesignTimePPI);
@@ -370,7 +372,7 @@ end;
 
 function TTagEdit.GetTagHeight: integer;
 begin
-  Result := Scale(CoalesceInt(Font.Size, Screen.SystemFont.Size, 10) * 2 + 6);
+  Result := Scale(CoalesceInt(Font.Size, Screen.SystemFont.Size, 8) * 2 + 6);
 end;
 
 function TTagEdit.GetTagRect(Index: integer): TRect;
@@ -439,10 +441,10 @@ end;
 
 function TTagEdit.CoalesceInt(const A, B: integer; const C: integer = 0): integer;
 begin
-  if A <> 0 then
+  if A > 0 then
     Result := A
   else
-  if B <> 0 then
+  if B > 0 then
     Result := B
   else
     Result := C;
@@ -581,7 +583,7 @@ begin
     if (not FReadOnly) then
     begin
       Canvas.Font.Color := clGray;
-      M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 10) * 1.3) + 2);
+      M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 8) * 1.3) + 2);
       Canvas.TextOut(R.Right - M, R.Top + Scale(2), '×');
     end;
 
@@ -704,7 +706,7 @@ end;
 
 procedure TTagEdit.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: integer);
 var
-  idx: integer;
+  idx, M: integer;
   R: TRect;
 begin
   inherited MouseDown(Button, Shift, X, Y);
@@ -719,8 +721,9 @@ begin
     if (not FReadOnly) and (idx >= 0) then
     begin
       R := GetTagRect(idx);
+      M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 8) * 1.3) + 2);
       // Click near right edge removes the tag - do it immediately
-      if (X > R.Right - Scale(16)) and ((not RemoveConfirm) or (MessageDlg(FRemoveConfirmTitle, FRemoveConfirmMessage +
+      if (X > R.Right - M) and ((not RemoveConfirm) or (MessageDlg(FRemoveConfirmTitle, FRemoveConfirmMessage +
         ' "' + FTags[idx] + '"?', mtConfirmation, [mbYes, mbNo], 0) = mrYes)) then
       begin
         RemoveTag(FTags[idx]);
@@ -824,7 +827,7 @@ end;
 procedure TTagEdit.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: integer);
 var
   TempTag: string;
-  idx: integer;
+  idx, M: integer;
   R: TRect;
 begin
   inherited MouseUp(Button, Shift, X, Y);
@@ -839,8 +842,9 @@ begin
       if (idx = FMouseDownIndex) and (idx >= 0) then
       begin
         R := GetTagRect(idx);
+        M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 8) * 1.3) + 2);
         // Don't trigger click for remove button area (already handled in MouseDown)
-        if not (X > R.Right - Scale(16)) then
+        if not (X > R.Right - M) then
         begin
           // Generate OnTagClick event
           if Assigned(FOnTagClick) then
