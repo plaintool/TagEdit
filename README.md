@@ -2,6 +2,10 @@
 
 A versatile tag management control for Lazarus/FPC with advanced features.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Build with: Lazarus](https://img.shields.io/badge/Build_with-Lazarus-blueviolet)](https://www.lazarus-ide.org/)
+[![Platform: Windows Linux](https://img.shields.io/badge/Platform-Windows_Linux-yellow)](#)
+
 ![sample](TagEditSample.png)
 
 ## Features
@@ -66,7 +70,23 @@ A versatile tag management control for Lazarus/FPC with advanced features.
 - `OnTagRemove` - Fired when a tag is removed  
 - `OnTagClick` - Fired when a tag is clicked
 
-## Usage
+# Installation
+
+## Method 1: Through IDE
+1. Open Lazarus IDE
+2. Go to **Package** → **Open Package File (.lpk)**
+3. Navigate to `TagEdit\packages\TagEditPackage.lpk`
+4. Click **Open**
+5. In the package window, click **Compile**
+6. After successful compilation, click **Use** → **Install**
+7. Restart Lazarus IDE
+
+## After Installation
+- The component will appear in the palette under "Common Controls" tab
+- You can now drag TTagEdit component to your forms
+- Use Object Inspector to customize properties
+
+## Sample usage
 
 ```pascal
 // Add tags programmatically
@@ -89,5 +109,5 @@ TagEdit1.RemoveConfirmTitle := 'Delete Tag';
 TagEdit1.RemoveConfirmMessage := 'Are you sure you want to remove this tag?';
 
 // Set minimum edit width
-TagEdit1.EditMinWidth := 80;
+TagEdit1.EditMinWidth := 10;
 ```
