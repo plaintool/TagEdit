@@ -39,6 +39,7 @@ type
     FParentFont: boolean;
     FReadOnly: boolean;
     FEnabled: boolean;
+    FAutoSizeHeight: boolean;
 
     FOnTagAdd: TTagEvent;
     FOnTagRemove: TTagEvent;
@@ -59,6 +60,8 @@ type
     procedure UpdateEditPosition;
     procedure UpdateHoverState(X, Y: integer);
     function CoalesceInt(const A, B: integer): integer;
+    procedure SetAutoSizeHeight(Value: boolean);
+    procedure UpdateAutoHeight;
   protected
     procedure Paint; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: integer); override;
@@ -67,6 +70,7 @@ type
     procedure MouseLeave; override;
     property TagHeight: integer read GetTagHeight;
     procedure SetEnabled(Value: boolean); override;
+    procedure Resize; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -76,9 +80,11 @@ type
     procedure ParentFontChange(Sender: TObject);
     procedure FontChanged(Sender: TObject); override;
     procedure SetParent(AParent: TWinControl); override;
+    function CalculateAutoHeight: integer;
   published
     property Align;
     property Anchors;
+    property AutoSizeHeight: boolean read FAutoSizeHeight write SetAutoSizeHeight default False;
     property Color default clWindow;
     property Visible;
     property ShowHint;
@@ -102,7 +108,7 @@ type
     property ReadOnly: boolean read FReadOnly write SetReadOnly default False;
     property Enabled: boolean read FEnabled write SetEnabled;
 
-    property Tags: TStringList read GetTags write SetTags;
+    property Items: TStringList read GetTags write SetTags;
 
     property OnTagAdd: TTagEvent read FOnTagAdd write FOnTagAdd;
     property OnTagRemove: TTagEvent read FOnTagRemove write FOnTagRemove;
@@ -134,6 +140,7 @@ begin
 
   FReadOnly := False;
   FEnabled := True;
+  FAutoSizeHeight := False;
   FFont := TFont.Create;
   FFont.OnChange := @FontChanged;
   FParentFont := True;
@@ -196,6 +203,7 @@ procedure TTagEdit.SetTags(Value: TStringList);
 begin
   FTags.Assign(Value);
   Invalidate;
+  UpdateAutoHeight;
 end;
 
 procedure TTagEdit.SetFont(Value: TFont);
@@ -206,6 +214,7 @@ begin
     FEdit.Font.Assign(Value);
     FParentFont := False;
     Invalidate;
+    UpdateAutoHeight;
   end;
 end;
 
@@ -252,6 +261,8 @@ begin
     // Subscribe to font change
     FFont.OnChange := @FontChanged;
   end;
+  Invalidate;
+  UpdateAutoHeight;
 end;
 
 procedure TTagEdit.ParentFontChange(Sender: TObject);
@@ -261,6 +272,7 @@ begin
     FFont.Assign(Parent.Font);
     FEdit.Font.Assign(Parent.Font);
     Invalidate;
+    UpdateAutoHeight;
   end;
 end;
 
@@ -271,6 +283,7 @@ begin
   if (Assigned(Parent)) and (not FFont.IsEqual(Parent.Font)) and (FFont.Size > 0) then
     FParentFont := False;
   Invalidate;
+  UpdateAutoHeight;
 end;
 
 procedure TTagEdit.SetReadOnly(Value: boolean);
@@ -287,10 +300,21 @@ begin
   FEdit.Visible := Value;
 end;
 
+procedure TTagEdit.SetAutoSizeHeight(Value: boolean);
+begin
+  if FAutoSizeHeight <> Value then
+  begin
+    FAutoSizeHeight := Value;
+    if FAutoSizeHeight then
+      UpdateAutoHeight;
+  end;
+end;
+
 procedure TTagEdit.TagsChanged(Sender: TObject);
 begin
-  FHoverIndex := -1; // Reset hover state when tags change
+  FHoverIndex := -1; // Reset hover state when Items change
   Invalidate;
+  UpdateAutoHeight;
 end;
 
 procedure TTagEdit.AddTag(const ATag: string);
@@ -302,6 +326,7 @@ begin
     if Assigned(FOnTagAdd) then
       FOnTagAdd(Self, ATag);
     Invalidate;
+    UpdateAutoHeight;
   end;
 end;
 
@@ -316,6 +341,7 @@ begin
     if Assigned(FOnTagRemove) then
       FOnTagRemove(Self, ATag);
     Invalidate;
+    UpdateAutoHeight;
   end;
 end;
 
@@ -394,6 +420,76 @@ begin
     Result := A
   else
     Result := B;
+end;
+
+function TTagEdit.CalculateAutoHeight: integer;
+var
+  I: integer;
+  X, Y, W, H: integer;
+  AvailWidth: integer;
+  LastRect: TRect;
+  EditBottom: integer;
+begin
+  if FTags.Count = 0 then
+  begin
+    // Minimum height for empty control (edit box + padding)
+    Result := 4 + GetTagHeight + 4;
+    if FBorderWidth > 0 then
+      Inc(Result, 2 * FBorderWidth);
+    Exit;
+  end;
+
+  // Calculate available width
+  AvailWidth := ClientWidth - 8;
+  if FBorderWidth > 0 then
+    Dec(AvailWidth, 2 * FBorderWidth);
+
+  Canvas.Font.Assign(Font);
+  H := GetTagHeight;
+
+  X := 4;
+  Y := 4;
+
+  // Simulate tag layout to find bottom position
+  for I := 0 to FTags.Count - 1 do
+  begin
+    W := Canvas.TextWidth(FTags[I]) + CoalesceInt(Font.Size, Screen.SystemFont.Size) * 2 + 6;
+
+    // Wrap to next line if tag doesn't fit
+    if (I > 0) and ((X + W) > AvailWidth) then
+    begin
+      X := 4;
+      Y := Y + H + 4;
+    end;
+
+    LastRect := Rect(X, Y, X + W, Y + H);
+    Inc(X, W + 4);
+  end;
+
+  // Calculate edit box position
+  if (LastRect.Right + 4 + FEditMinWidth) <= AvailWidth then
+    EditBottom := LastRect.Bottom + 4 // Edit on same line
+  else
+    EditBottom := LastRect.Bottom + 4 + H + 4; // Edit on new line
+
+  // Return total height including borders
+  Result := EditBottom;
+  if FBorderWidth > 0 then
+    Inc(Result, 2 * FBorderWidth);
+end;
+
+procedure TTagEdit.UpdateAutoHeight;
+begin
+  if FAutoSizeHeight then
+  begin
+    Height := CalculateAutoHeight;
+  end;
+end;
+
+procedure TTagEdit.Resize;
+begin
+  inherited Resize;
+  UpdateAutoHeight;
 end;
 
 procedure TTagEdit.DrawTags;
@@ -510,7 +606,7 @@ begin
     end
     else
     begin
-      // No tags - show indicator at start
+      // No Items - show indicator at start
       Canvas.MoveTo(2, 4);
       Canvas.LineTo(2, 4 + TagHeight);
     end;
@@ -569,6 +665,7 @@ begin
     if Assigned(FOnTagRemove) then
       FOnTagRemove(Self, ATag);
     Invalidate;
+    UpdateAutoHeight;
   end;
 end;
 
@@ -659,7 +756,7 @@ begin
         NewDropIndex := FTags.Count
       else
       begin
-        // If cursor is between tags, find the closest tag
+        // If cursor is between Items, find the closest tag
         ClosestIndex := -1;
         MinDistance := MaxInt;
 
@@ -683,7 +780,7 @@ begin
         end
         else
         begin
-          // No tags found, place at the end
+          // No Items found, place at the end
           NewDropIndex := FTags.Count;
         end;
       end;
@@ -746,6 +843,7 @@ begin
       FDragIndex := -1;
       FDropIndex := -1;
       Invalidate;
+      UpdateAutoHeight;
     end;
 
     // Reset mouse down state

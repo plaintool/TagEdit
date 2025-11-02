@@ -1,0 +1,1 @@
+C:\Windows\System32\tar -cvf tagedit.tar --exclude=tagedit.tar --exclude=packages/lib --exclude=.git *
