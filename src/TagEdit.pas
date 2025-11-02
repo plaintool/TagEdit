@@ -314,7 +314,7 @@ end;
 procedure TTagEdit.SetReadOnly(Value: boolean);
 begin
   FReadOnly := Value;
-  FEdit.ReadOnly := Value;
+  FEdit.Visible := not Value;
   Invalidate;
 end;
 
@@ -508,7 +508,7 @@ end;
 
 procedure TTagEdit.UpdateAutoHeight;
 begin
-  if FAutoSizeHeight then
+  if FAutoSizeHeight and (not (Align in [alClient, alRight, alLeft])) then
   begin
     Height := CalculateAutoHeight;
   end;
@@ -574,10 +574,17 @@ begin
 
     Canvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom, FRoundCorners, FRoundCorners);
 
+
     // Draw tag text
     Canvas.Brush.Style := bsClear;
     Canvas.Font.Color := Font.Color;
-    Canvas.TextOut(R.Left + Scale(6), R.Top + Scale(2), s);
+
+    if (FReadOnly) then
+      M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 8) * 1.3) + 2)
+    else
+      M := 0;
+
+    Canvas.TextOut(R.Left + Scale(6) + M div 2, R.Top + Scale(2), s);
 
     // Draw '×' button
     if (not FReadOnly) then
@@ -730,7 +737,8 @@ begin
         FMouseDownIndex := -1; // Reset since we handled it
       end;
     end;
-    FEdit.SetFocus;
+    if FEdit.Visible and FEdit.CanFocus then
+      FEdit.SetFocus;
   end;
 end;
 
@@ -842,7 +850,10 @@ begin
       if (idx = FMouseDownIndex) and (idx >= 0) then
       begin
         R := GetTagRect(idx);
-        M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 8) * 1.3) + 2);
+        if ReadOnly then
+          M := 0
+        else
+          M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 8) * 1.3) + 2);
         // Don't trigger click for remove button area (already handled in MouseDown)
         if not (X > R.Right - M) then
         begin
