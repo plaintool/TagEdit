@@ -62,6 +62,7 @@ type
     function CoalesceInt(const A, B: integer; const C: integer = 0): integer;
     procedure SetAutoSizeHeight(Value: boolean);
     procedure UpdateAutoHeight;
+    function Scale(const AValue: integer): integer;
   protected
     procedure Paint; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: integer); override;
@@ -81,6 +82,8 @@ type
     procedure FontChanged(Sender: TObject); override;
     procedure SetParent(AParent: TWinControl); override;
     function CalculateAutoHeight: integer;
+    procedure ScaleFontsPPI(const AToPPI: integer; const AProportion: double); override;
+    procedure FixDesignFontsPPI(const ADesignTimePPI: integer); override;
   published
     property Align;
     property Anchors;
@@ -132,9 +135,8 @@ implementation
 constructor TTagEdit.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  Height := 32;
-  Width := 300;
-  Tag := 0;
+  Height := Scale(32);
+  Width := Scale(300);
   Color := clWindow;
   ParentColor := False;
 
@@ -156,8 +158,8 @@ begin
   FTagBorderColor := clWindowFrame;
   FTagBorderWidth := 0;
   FBorderColor := clWindowFrame;
-  FEditMinWidth := 50;
-  FRoundCorners := 5;
+  FEditMinWidth := Scale(50);
+  FRoundCorners := Scale(5);
 
   // Create inner edit control
   FEdit := TEdit.Create(Self);
@@ -286,6 +288,27 @@ begin
   UpdateAutoHeight;
 end;
 
+function TTagEdit.Scale(const AValue: integer): integer;
+begin
+  Result := Scale96ToScreen(AValue);
+end;
+
+procedure TTagEdit.ScaleFontsPPI(const AToPPI: integer; const AProportion: double);
+begin
+  inherited ScaleFontsPPI(AToPPI, AProportion);
+  DoScaleFontPPI(FFont, AToPPI, AProportion);
+  if (Assigned(Parent)) and (FParentFont) then
+    DoScaleFontPPI(Parent.Font, AToPPI, AProportion);
+end;
+
+procedure TTagEdit.FixDesignFontsPPI(const ADesignTimePPI: integer);
+begin
+  inherited FixDesignFontsPPI(ADesignTimePPI);
+  DoFixDesignFontPPI(FFont, ADesignTimePPI);
+  if (Assigned(Parent)) and (FParentFont) then
+    DoFixDesignFontPPI(Parent.Font, ADesignTimePPI);
+end;
+
 procedure TTagEdit.SetReadOnly(Value: boolean);
 begin
   FReadOnly := Value;
@@ -347,7 +370,7 @@ end;
 
 function TTagEdit.GetTagHeight: integer;
 begin
-  Result := CoalesceInt(Font.Size, Screen.SystemFont.Size, 10) * 2 + 6;
+  Result := Scale(CoalesceInt(Font.Size, Screen.SystemFont.Size, 10) * 2 + 6);
 end;
 
 function TTagEdit.GetTagRect(Index: integer): TRect;
@@ -369,7 +392,7 @@ begin
   FUpdatingEdit := True;
   try
     // Calculate available width considering borders
-    AvailWidth := ClientWidth - 8;
+    AvailWidth := ClientWidth - Scale(8);
     if FBorderWidth > 0 then
       Dec(AvailWidth, 2 * FBorderWidth);
 
@@ -378,23 +401,23 @@ begin
       LastRect := GetTagRect(FTags.Count - 1);
 
       // Check if sufficient space exists for Edit after last tag
-      if (LastRect.Right + 4 + FEditMinWidth) <= AvailWidth then
+      if (LastRect.Right + Scale(4) + FEditMinWidth) <= AvailWidth then
       begin
         // If space permits, place on the same line
-        NewLeft := LastRect.Right + 4;
+        NewLeft := LastRect.Right + Scale(4);
         NewTop := LastRect.Top;
       end
       else
       begin
         // If insufficient space - move to new line
-        NewLeft := 4;
-        NewTop := LastRect.Bottom + 4;
+        NewLeft := Scale(4);
+        NewTop := LastRect.Bottom + Scale(4);
       end;
     end
     else
     begin
-      NewLeft := 4;
-      NewTop := 4;
+      NewLeft := Scale(4);
+      NewTop := Scale(4);
     end;
 
     // Set position only when changed
@@ -405,7 +428,7 @@ begin
     end;
 
     // Set Edit width
-    FEdit.Width := ClientWidth - FEdit.Left - 4;
+    FEdit.Width := ClientWidth - FEdit.Left - Scale(4);
     if FEdit.Width < FEditMinWidth then
       FEdit.Width := FEditMinWidth;
     FEdit.Height := TagHeight;
@@ -436,22 +459,22 @@ begin
   if FTags.Count = 0 then
   begin
     // Minimum height for empty control (edit box + padding)
-    Result := 4 + GetTagHeight + 4;
+    Result := Scale(4) + GetTagHeight + Scale(4);
     if FBorderWidth > 0 then
       Inc(Result, 2 * FBorderWidth);
     Exit;
   end;
 
   // Calculate available width
-  AvailWidth := ClientWidth - 8;
+  AvailWidth := ClientWidth - Scale(8);
   if FBorderWidth > 0 then
     Dec(AvailWidth, 2 * FBorderWidth);
 
   Canvas.Font.Assign(Font);
   H := GetTagHeight;
 
-  X := 4;
-  Y := 4;
+  X := Scale(4);
+  Y := Scale(4);
 
   // Simulate tag layout to find bottom position
   for I := 0 to FTags.Count - 1 do
@@ -461,19 +484,19 @@ begin
     // Wrap to next line if tag doesn't fit
     if (I > 0) and ((X + W) > AvailWidth) then
     begin
-      X := 4;
-      Y := Y + H + 4;
+      X := Scale(4);
+      Y := Y + H + Scale(4);
     end;
 
     LastRect := Rect(X, Y, X + W, Y + H);
-    Inc(X, W + 4);
+    Inc(X, W + Scale(4));
   end;
 
   // Calculate edit box position
   if (LastRect.Right + 4 + FEditMinWidth) <= AvailWidth then
-    EditBottom := LastRect.Bottom + 4 // Edit on same line
+    EditBottom := LastRect.Bottom + Scale(4) // Edit on same line
   else
-    EditBottom := LastRect.Bottom + 4 + H + 4; // Edit on new line
+    EditBottom := LastRect.Bottom + Scale(4) + H + Scale(4); // Edit on new line
 
   // Return total height including borders
   Result := EditBottom;
@@ -505,15 +528,15 @@ var
   CurrentTagColor: TColor;
 begin
   // Calculate available width considering border
-  AvailWidth := ClientWidth - 8;
+  AvailWidth := ClientWidth - Scale(8);
   if FBorderWidth > 0 then
     Dec(AvailWidth, 2 * FBorderWidth);
 
   Canvas.Font.Assign(Font);
   SetLength(FTagRects, FTags.Count);
 
-  X := 4;
-  Y := 4;
+  X := Scale(4);
+  Y := Scale(4);
   H := TagHeight;
 
   for i := 0 to FTags.Count - 1 do
@@ -525,8 +548,8 @@ begin
     // Move to next line if tag doesn't fit
     if (i > 0) and ((X + W) > AvailWidth) then
     begin
-      X := 4;
-      Y := Y + H + 4;
+      X := Scale(4);
+      Y := Y + H + Scale(4);
     end;
 
     R := Rect(X, Y, X + W, Y + H);
@@ -552,17 +575,17 @@ begin
     // Draw tag text
     Canvas.Brush.Style := bsClear;
     Canvas.Font.Color := Font.Color;
-    Canvas.TextOut(R.Left + 6, R.Top + 2, s);
+    Canvas.TextOut(R.Left + Scale(6), R.Top + Scale(2), s);
 
     // Draw '×' button
     if (not FReadOnly) then
     begin
       Canvas.Font.Color := clGray;
-      M := Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 10) * 1.3) + 2;
-      Canvas.TextOut(R.Right - M, R.Top + 2, '×');
+      M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 10) * 1.3) + 2);
+      Canvas.TextOut(R.Right - M, R.Top + Scale(2), '×');
     end;
 
-    Inc(X, W + 4);
+    Inc(X, W + Scale(4));
   end;
 
   if not (csDesigning in ComponentState) then
@@ -598,20 +621,20 @@ begin
     if FDropIndex < FTags.Count then
     begin
       R := GetTagRect(FDropIndex);
-      Canvas.MoveTo(R.Left - 2, R.Top);
-      Canvas.LineTo(R.Left - 2, R.Bottom);
+      Canvas.MoveTo(R.Left - Scale(2), R.Top);
+      Canvas.LineTo(R.Left - Scale(2), R.Bottom);
     end
     else if FTags.Count > 0 then
     begin
       R := GetTagRect(FTags.Count - 1);
-      Canvas.MoveTo(R.Right + 2, R.Top);
-      Canvas.LineTo(R.Right + 2, R.Bottom);
+      Canvas.MoveTo(R.Right + Scale(2), R.Top);
+      Canvas.LineTo(R.Right + Scale(2), R.Bottom);
     end
     else
     begin
       // No Items - show indicator at start
-      Canvas.MoveTo(2, 4);
-      Canvas.LineTo(2, 4 + TagHeight);
+      Canvas.MoveTo(Scale(2), Scale(4));
+      Canvas.LineTo(Scale(2), Scale(4) + TagHeight);
     end;
   end;
 end;
@@ -697,7 +720,7 @@ begin
     begin
       R := GetTagRect(idx);
       // Click near right edge removes the tag - do it immediately
-      if (X > R.Right - 16) and ((not RemoveConfirm) or (MessageDlg(FRemoveConfirmTitle, FRemoveConfirmMessage +
+      if (X > R.Right - Scale(16)) and ((not RemoveConfirm) or (MessageDlg(FRemoveConfirmTitle, FRemoveConfirmMessage +
         ' "' + FTags[idx] + '"?', mtConfirmation, [mbYes, mbNo], 0) = mrYes)) then
       begin
         RemoveTag(FTags[idx]);
@@ -730,7 +753,7 @@ begin
   // Start dragging only if mouse moved beyond threshold and we have a valid tag index
   if not FReadOnly and not FDragging and (ssLeft in Shift) and (FMouseDownIndex >= 0) then
   begin
-    DragThreshold := 5; // pixels
+    DragThreshold := Scale(5); // pixels
     if (Abs(X - FMouseDownPos.X) > DragThreshold) or (Abs(Y - FMouseDownPos.Y) > DragThreshold) then
     begin
       FDragging := True;
@@ -817,7 +840,7 @@ begin
       begin
         R := GetTagRect(idx);
         // Don't trigger click for remove button area (already handled in MouseDown)
-        if not (X > R.Right - 16) then
+        if not (X > R.Right - Scale(16)) then
         begin
           // Generate OnTagClick event
           if Assigned(FOnTagClick) then
