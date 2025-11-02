@@ -16,30 +16,35 @@ type
     FTagRects: array of TRect;
 
     FEdit: TEdit;
+    FColor: TColor;
     FTagColor: TColor;
     FTagBorderColor: TColor;
     FBorderColor: TColor;
     FTagHoverColor: TColor;
 
-    FTagBorderWidth: integer;
+    FAutoSizeHeight: boolean;
+    FReadOnly: boolean;
+    FEnabled: boolean;
+
     FBorderWidth: integer;
     FRoundCorners: integer;
+    FTagBorderWidth: integer;
+    FEditMinWidth: integer;
+
+    FDragging: boolean;
     FDragIndex: integer;
     FDropIndex: integer;
-    FDragging: boolean;
     FUpdatingEdit: boolean;
-    FEditMinWidth: integer;
     FHoverIndex: integer;
     FMouseDownPos: TPoint;
     FMouseDownIndex: integer;
+
     FRemoveConfirm: boolean;
     FRemoveConfirmMessage: string;
     FRemoveConfirmTitle: string;
+
     FFont: TFont;
     FParentFont: boolean;
-    FReadOnly: boolean;
-    FEnabled: boolean;
-    FAutoSizeHeight: boolean;
 
     FOnTagAdd: TTagEvent;
     FOnTagRemove: TTagEvent;
@@ -69,9 +74,9 @@ type
     procedure MouseMove(Shift: TShiftState; X, Y: integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: integer); override;
     procedure MouseLeave; override;
-    property TagHeight: integer read GetTagHeight;
     procedure SetEnabled(Value: boolean); override;
     procedure Resize; override;
+    procedure SetColor(Value: TColor); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -88,7 +93,7 @@ type
     property Align;
     property Anchors;
     property AutoSizeHeight: boolean read FAutoSizeHeight write SetAutoSizeHeight default False;
-    property Color default clWindow;
+    property Color read FColor write SetColor default clWindow;
     property Visible;
     property ShowHint;
     property PopupMenu;
@@ -137,7 +142,7 @@ begin
   inherited Create(AOwner);
   Height := Scale(32);
   Width := Scale(300);
-  Color := clWindow;
+  FColor := clWindow;
   ParentColor := False;
 
   FReadOnly := False;
@@ -206,6 +211,14 @@ begin
   FTags.Assign(Value);
   Invalidate;
   UpdateAutoHeight;
+end;
+
+procedure TTagEdit.SetColor(Value: TColor);
+begin
+  inherited;
+  FColor := Value;
+  if Assigned(FEdit) then
+    FEdit.Color := Value;
 end;
 
 procedure TTagEdit.SetFont(Value: TFont);
@@ -433,7 +446,7 @@ begin
     FEdit.Width := ClientWidth - FEdit.Left - Scale(4);
     if FEdit.Width < FEditMinWidth then
       FEdit.Width := FEditMinWidth;
-    FEdit.Height := TagHeight;
+    FEdit.Height := GetTagHeight;
   finally
     FUpdatingEdit := False;
   end;
@@ -481,7 +494,7 @@ begin
   // Simulate tag layout to find bottom position
   for I := 0 to FTags.Count - 1 do
   begin
-    W := Canvas.TextWidth(FTags[I]) + TagHeight;
+    W := Canvas.TextWidth(FTags[I]) + GetTagHeight;
 
     // Wrap to next line if tag doesn't fit
     if (I > 0) and ((X + W) > AvailWidth) then
@@ -539,12 +552,12 @@ begin
 
   X := Scale(4);
   Y := Scale(4);
-  H := TagHeight;
+  H := GetTagHeight;
 
   for i := 0 to FTags.Count - 1 do
   begin
     s := FTags[i];
-    M := TagHeight;
+    M := GetTagHeight;
     W := Canvas.TextWidth(s) + M;
 
     // Move to next line if tag doesn't fit
@@ -643,7 +656,7 @@ begin
     begin
       // No Items - show indicator at start
       Canvas.MoveTo(Scale(2), Scale(4));
-      Canvas.LineTo(Scale(2), Scale(4) + TagHeight);
+      Canvas.LineTo(Scale(2), Scale(4) + GetTagHeight);
     end;
   end;
 end;
@@ -688,7 +701,7 @@ begin
   if Key = VK_RETURN then
   begin
     if FEdit.Text <> string.Empty then
-      AddTag(FEdit.Text);
+      AddTag(Trim(FEdit.Text));
     Key := 0;
   end;
 
@@ -708,7 +721,7 @@ procedure TTagEdit.EditExit(Sender: TObject);
 begin
   // When leaving the edit, add tag if not empty
   if FEdit.Text <> string.Empty then
-    AddTag(FEdit.Text);
+    AddTag(Trim(FEdit.Text));
 end;
 
 procedure TTagEdit.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: integer);
