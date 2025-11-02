@@ -38,6 +38,7 @@ type
     FFont: TFont;
     FParentFont: boolean;
     FReadOnly: boolean;
+    FEnabled: boolean;
 
     FOnTagAdd: TTagEvent;
     FOnTagRemove: TTagEvent;
@@ -65,6 +66,7 @@ type
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: integer); override;
     procedure MouseLeave; override;
     property TagHeight: integer read GetTagHeight;
+    procedure SetEnabled(Value: boolean); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -78,7 +80,6 @@ type
     property Align;
     property Anchors;
     property Color default clWindow;
-    property Enabled;
     property Visible;
     property ShowHint;
     property PopupMenu;
@@ -99,6 +100,7 @@ type
     property RemoveConfirmMessage: string read FRemoveConfirmMessage write FRemoveConfirmMessage;
     property ParentFont: boolean read FParentFont write SetParentFont default True;
     property ReadOnly: boolean read FReadOnly write SetReadOnly default False;
+    property Enabled: boolean read FEnabled write SetEnabled;
 
     property Tags: TStringList read GetTags write SetTags;
 
@@ -131,6 +133,7 @@ begin
   ParentColor := False;
 
   FReadOnly := False;
+  FEnabled := True;
   FFont := TFont.Create;
   FFont.OnChange := @FontChanged;
   FParentFont := True;
@@ -265,7 +268,7 @@ procedure TTagEdit.FontChanged(Sender: TObject);
 begin
   inherited;
   FEdit.Font.Assign(Font);
-  if (Assigned(Parent)) and (not FFont.IsEqual(Parent.Font)) then
+  if (Assigned(Parent)) and (not FFont.IsEqual(Parent.Font)) and (FFont.Size > 0) then
     FParentFont := False;
   Invalidate;
 end;
@@ -275,6 +278,13 @@ begin
   FReadOnly := Value;
   FEdit.ReadOnly := Value;
   Invalidate;
+end;
+
+procedure TTagEdit.SetEnabled(Value: boolean);
+begin
+  inherited;
+  FEnabled := Value;
+  FEdit.Visible := Value;
 end;
 
 procedure TTagEdit.TagsChanged(Sender: TObject);
@@ -414,7 +424,7 @@ begin
     W := Canvas.TextWidth(s) + M;
 
     // Move to next line if tag doesn't fit
-    if (X + W) > AvailWidth then
+    if (i > 0) and ((X + W) > AvailWidth) then
     begin
       X := 4;
       Y := Y + H + 4;
@@ -441,6 +451,7 @@ begin
     Canvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom, FRoundCorners, FRoundCorners);
 
     // Draw tag text
+    Canvas.Brush.Style := bsClear;
     Canvas.Font.Color := Font.Color;
     Canvas.TextOut(R.Left + 6, R.Top + 2, s);
 
