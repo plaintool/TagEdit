@@ -58,6 +58,7 @@ type
     procedure SetParentFont(Value: boolean);
     procedure SetReadOnly(Value: boolean);
     procedure TagsChanged(Sender: TObject);
+    function RemovalConfirmed(idx: integer): boolean;
     procedure DrawTags;
     function GetTagHeight: integer;
     function GetTagRect(Index: integer): TRect;
@@ -353,6 +354,15 @@ begin
   FHoverIndex := -1; // Reset hover state when Items change
   Invalidate;
   UpdateAutoHeight;
+end;
+
+function TTagEdit.RemovalConfirmed(idx: integer): boolean;
+begin
+  if not RemoveConfirm then
+    exit(true);
+  result := MessageDlg(FRemoveConfirmTitle,
+    FRemoveConfirmMessage + ' "' + FTags[idx] + '"?',
+    mtConfirmation, [mbYes, mbNo], 0) = mrYes;
 end;
 
 procedure TTagEdit.AddTag(const ATag: string);
@@ -706,7 +716,8 @@ begin
   end;
 
   // Backspace removes last tag if edit is empty
-  if (Key = VK_BACK) and (FEdit.Text = string.Empty) and (FTags.Count > 0) then
+  if (Key = VK_BACK) and (FEdit.Text = string.Empty) and (FTags.Count > 0)
+    and RemovalConfirmed(FTags.Count - 1) then
   begin
     ATag := FTags[FTags.Count - 1];
     FTags.Delete(FTags.Count - 1);
@@ -743,8 +754,7 @@ begin
       R := GetTagRect(idx);
       M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 8) * 1.3) + 2);
       // Click near right edge removes the tag - do it immediately
-      if (X > R.Right - M) and ((not RemoveConfirm) or (MessageDlg(FRemoveConfirmTitle, FRemoveConfirmMessage +
-        ' "' + FTags[idx] + '"?', mtConfirmation, [mbYes, mbNo], 0) = mrYes)) then
+      if (X > R.Right - M) and RemovalConfirmed(idx) then
       begin
         RemoveTag(FTags[idx]);
         FMouseDownIndex := -1; // Reset since we handled it
