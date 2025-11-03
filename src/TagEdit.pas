@@ -5,7 +5,7 @@ unit TagEdit;
 interface
 
 uses
-  Classes, SysUtils, Controls, StdCtrls, Graphics, Math, Types, Forms, Dialogs, LCLType, LCLIntf;
+  Classes, SysUtils, Controls, StdCtrls, Graphics, Math, Types, Forms, Dialogs, LCLType, LCLIntf, TagColorItems;
 
 type
   TTagEvent = procedure(Sender: TObject; const TagText: string) of object;
@@ -22,6 +22,7 @@ type
     FTagBorderColor: TColor;
     FBorderColor: TColor;
     FTagHoverColor: TColor;
+    FTagColors: TTagColorItems;
 
     FAutoSizeHeight: boolean;
     FAllowReorder: boolean;
@@ -74,8 +75,10 @@ type
     function CoalesceInt(const A, B: integer; const C: integer = 0): integer;
     procedure SetAutoSizeHeight(Value: boolean);
     procedure UpdateAutoHeight;
+    procedure SetTagColors(Value: TTagColorItems);
     function Scale(const AValue: integer): integer;
     function RandTagColor(const TagName: string; BrightnessPercent: integer = 70): TColor;
+    function FindTagColor(const S: string): TColor;
     function GetContrastTextColor(BackColor, FontColor: TColor; MidLevel: integer = 128): TColor;
   protected
     procedure Paint; override;
@@ -130,6 +133,7 @@ type
     property ParentFont: boolean read FParentFont write SetParentFont default True;
     property ReadOnly: boolean read FReadOnly write SetReadOnly default False;
     property Enabled: boolean read FEnabled write SetEnabled;
+    property TagColors: TTagColorItems read FTagColors write SetTagColors;
 
     property Items: TStringList read GetTags write SetTags;
 
@@ -170,6 +174,8 @@ begin
   FTagHoverUnderline := True;
   FCloseButtons := True;
   FCloseButtonOnHover := True;
+
+  FTagColors := TTagColorItems.Create(Self);
 
   FTags := TStringList.Create;
   FTags.CaseSensitive := True;
@@ -221,6 +227,12 @@ begin
   FFont.Free;
   FEdit.Free;
   inherited Destroy;
+end;
+
+procedure TTagEdit.SetTagColors(Value: TTagColorItems);
+begin
+  FTagColors.Assign(Value);
+  Invalidate;
 end;
 
 function TTagEdit.GetTags: TStringList;
@@ -610,6 +622,18 @@ begin
   Result := RGBToColor(R, G, B);
 end;
 
+function TTagEdit.FindTagColor(const S: string): TColor;
+var
+  i: integer;
+begin
+  Result := clNone;
+  for i := 0 to TagColors.Count - 1 do
+  begin
+    if Pos(UpperCase(TagColors[i].TagName), UpperCase(S)) > 0 then
+      Exit(TagColors[i].Color);
+  end;
+end;
+
 function TTagEdit.GetContrastTextColor(BackColor, FontColor: TColor; MidLevel: integer = 128): TColor;
 var
   Rb, Gb, Bb: byte; // background
@@ -717,15 +741,25 @@ begin
       if Hover then
         Color1 := FTagHoverColor
       else
-      if FTagColor <> clNone then
-        Color1 := FTagColor
-      else
-        Color1 := RandTagColor(Part1, FAutoColorBrigtness);
+      begin
+        Color1 := FindTagColor(Part1);
+        if Color1 = clNone then
+        begin
+          if FTagColor <> clNone then
+            Color1 := FTagColor
+          else
+            Color1 := RandTagColor(Part1, FAutoColorBrigtness);
+        end;
+      end;
 
-      if FTagSuffixColor <> clNone then
-        Color2 := FTagSuffixColor
-      else
-        Color2 := RandTagColor(Part2, FAutoColorBrigtness);
+      Color2 := FindTagColor(Part2);
+      if Color2 = clNone then
+      begin
+        if FTagSuffixColor <> clNone then
+          Color2 := FTagSuffixColor
+        else
+          Color2 := RandTagColor(Part2, FAutoColorBrigtness);
+      end;
 
       if Hover then
         Canvas.Pen.Color := FTagHoverColor
@@ -762,11 +796,17 @@ begin
     begin
       if Hover then
         Canvas.Brush.Color := FTagHoverColor
-
-      else if FTagColor <> clNone then
-        Canvas.Brush.Color := FTagColor
       else
-        Canvas.Brush.Color := RandTagColor(s, FAutoColorBrigtness);
+      begin
+        Canvas.Brush.Color := FindTagColor(s);
+        if Canvas.Brush.Color = clNone then
+        begin
+          if FTagColor <> clNone then
+            Canvas.Brush.Color := FTagColor
+          else
+            Canvas.Brush.Color := RandTagColor(s, FAutoColorBrigtness);
+        end;
+      end;
 
       if Hover then
         Canvas.Pen.Color := FTagHoverColor

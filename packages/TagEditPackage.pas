@@ -8,7 +8,7 @@ unit TagEditPackage;
 interface
 
 uses
-  TagEdit, TagEditRegister, LazarusPackageIntf;
+  TagEdit, TagEditRegister, TagColorItems, LazarusPackageIntf;
 
 implementation
 
