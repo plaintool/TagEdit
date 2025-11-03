@@ -1,3 +1,9 @@
+//-----------------------------------------------------------------------------------
+//  TTagEdit © 2025 by Alexander Tverskoy
+//  Licensed under the MIT License
+//  You may obtain a copy of the License at https://opensource.org/licenses/MIT
+//-----------------------------------------------------------------------------------
+
 unit TagEdit;
 
 {$mode objfpc}{$H+}
@@ -5,10 +11,22 @@ unit TagEdit;
 interface
 
 uses
-  Classes, SysUtils, Controls, StdCtrls, Graphics, Math, Types, Forms, Dialogs, LCLType, LCLIntf, TagColorItems;
+  Classes,
+  SysUtils,
+  Controls,
+  StdCtrls,
+  Graphics,
+  Math,
+  Types,
+  Forms,
+  Dialogs,
+  LCLType,
+  LCLIntf,
+  TagColorItems;
 
 type
   TTagEvent = procedure(Sender: TObject; const TagText: string) of object;
+  TTagPopupEvent = procedure(Sender: TObject; const TagText: string; var Handled: boolean) of object;
 
   TTagEdit = class(TCustomControl)
   private
@@ -56,6 +74,7 @@ type
     FOnTagAdd: TTagEvent;
     FOnTagRemove: TTagEvent;
     FOnTagClick: TTagEvent;
+    FOnTagPopup: TTagPopupEvent;
 
     procedure EditKeyDown(Sender: TObject; var Key: word; Shift: TShiftState);
     procedure EditExit(Sender: TObject);
@@ -80,6 +99,7 @@ type
     function RandTagColor(const TagName: string; BrightnessPercent: integer = 70): TColor;
     function FindTagColor(const S: string): TColor;
     function GetContrastTextColor(BackColor, FontColor: TColor; MidLevel: integer = 128): TColor;
+    procedure HandlePopupMenu(Sender: TObject);
   protected
     procedure Paint; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: integer); override;
@@ -89,6 +109,7 @@ type
     procedure SetEnabled(Value: boolean); override;
     procedure Resize; override;
     procedure SetColor(Value: TColor); override;
+    procedure DoContextPopup(MousePos: TPoint; var Handled: boolean); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -140,6 +161,7 @@ type
     property OnTagAdd: TTagEvent read FOnTagAdd write FOnTagAdd;
     property OnTagRemove: TTagEvent read FOnTagRemove write FOnTagRemove;
     property OnTagClick: TTagEvent read FOnTagClick write FOnTagClick;
+    property OnTagPopup: TTagPopupEvent read FOnTagPopup write FOnTagPopup;
     property OnClick;
     property OnDblClick;
     property OnMouseDown;
@@ -174,6 +196,7 @@ begin
   FTagHoverUnderline := True;
   FCloseButtons := True;
   FCloseButtonOnHover := True;
+  PopupMenu := nil;
 
   FTagColors := TTagColorItems.Create(Self);
 
@@ -702,7 +725,7 @@ begin
   for i := 0 to FTags.Count - 1 do
   begin
     s := FTags[i];
-    Hover := (i = FHoverIndex) and (FTagHoverColor <> clNone);
+    Hover := (i = FHoverIndex) and ((FTagHoverColor <> clNone) or FTagHoverUnderline);
 
     // Split tag by colon
     HasColon := Pos(':', s) > 0;
@@ -738,7 +761,7 @@ begin
 
     if HasColon then
     begin
-      if Hover then
+      if Hover and (FTagHoverColor <> clNone) then
         Color1 := FTagHoverColor
       else
       begin
@@ -761,7 +784,7 @@ begin
           Color2 := RandTagColor(Part2, FAutoColorBrigtness);
       end;
 
-      if Hover then
+      if Hover and (FTagHoverColor <> clNone) then
         Canvas.Pen.Color := FTagHoverColor
       else
       if FTagBorderColor = clNone then
@@ -794,7 +817,7 @@ begin
     end
     else
     begin
-      if Hover then
+      if Hover and (FTagHoverColor <> clNone) then
         Canvas.Brush.Color := FTagHoverColor
       else
       begin
@@ -808,7 +831,7 @@ begin
         end;
       end;
 
-      if Hover then
+      if Hover and (FTagHoverColor <> clNone) then
         Canvas.Pen.Color := FTagHoverColor
       else
       if FTagBorderColor = clNone then
@@ -1160,6 +1183,65 @@ begin
     FHoverIndex := -1;
     Invalidate;
   end;
+end;
+
+procedure TTagEdit.HandlePopupMenu(Sender: TObject);
+var
+  MousePos: TPoint;
+  TagIndex: integer;
+  Handled: boolean;
+begin
+  if not Assigned(FOnTagPopup) then
+    Exit;
+
+  // Get mouse position relative to the component
+  MousePos := ScreenToClient(Mouse.CursorPos);
+
+  // Find tag under cursor position
+  TagIndex := TagAtPos(MousePos);
+
+  if TagIndex >= 0 then
+  begin
+    Handled := False;
+    FOnTagPopup(Self, FTags[TagIndex], Handled);
+
+    // If event is handled, don't show standard popup menu
+    if Handled then
+      PopupMenu := nil;
+  end
+  else
+  begin
+    Handled := False;
+    FOnTagPopup(Self, '', Handled);
+
+    // If event is handled, don't show standard popup menu
+    if Handled then
+      PopupMenu := nil;
+  end;
+end;
+
+procedure TTagEdit.DoContextPopup(MousePos: TPoint; var Handled: boolean);
+var
+  TagIndex: integer;
+begin
+  if Assigned(FOnTagPopup) then
+  begin
+    // Find tag under cursor position
+    TagIndex := TagAtPos(MousePos);
+
+    if TagIndex >= 0 then
+    begin
+      Handled := False;
+      FOnTagPopup(Self, FTags[TagIndex], Handled);
+    end
+    else
+    begin
+      Handled := False;
+      FOnTagPopup(Self, '', Handled);
+    end;
+  end
+  else
+    inherited DoContextPopup(MousePos, Handled);
 end;
 
 end.
