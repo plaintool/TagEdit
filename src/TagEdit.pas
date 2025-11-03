@@ -23,6 +23,7 @@ type
     FTagHoverColor: TColor;
 
     FAutoSizeHeight: boolean;
+    FAllowReorder: boolean;
     FReadOnly: boolean;
     FEnabled: boolean;
 
@@ -93,15 +94,16 @@ type
   published
     property Align;
     property Anchors;
-    property AutoSizeHeight: boolean read FAutoSizeHeight write SetAutoSizeHeight default False;
-    property Color read FColor write SetColor default clWindow;
     property Visible;
     property ShowHint;
     property PopupMenu;
     property Height default 32;
     property Width default 300;
     property Tag default 0;
+    property Color read FColor write SetColor default clWindow;
     property Font: TFont read FFont write SetFont;
+    property AutoSizeHeight: boolean read FAutoSizeHeight write SetAutoSizeHeight default False;
+    property AllowReorder: boolean read FAllowReorder write FAllowReorder default True;
     property TagColor: TColor read FTagColor write FTagColor default clBtnFace;
     property TagHoverColor: TColor read FTagHoverColor write FTagHoverColor default clSkyBlue;
     property TagBorderColor: TColor read FTagBorderColor write FTagBorderColor default clWindowFrame;
@@ -149,6 +151,7 @@ begin
   FReadOnly := False;
   FEnabled := True;
   FAutoSizeHeight := False;
+  FAllowReorder := True;
   FFont := TFont.Create;
   FFont.OnChange := @FontChanged;
   FParentFont := True;
@@ -359,10 +362,8 @@ end;
 function TTagEdit.RemovalConfirmed(idx: integer): boolean;
 begin
   if not RemoveConfirm then
-    exit(true);
-  result := MessageDlg(FRemoveConfirmTitle,
-    FRemoveConfirmMessage + ' "' + FTags[idx] + '"?',
-    mtConfirmation, [mbYes, mbNo], 0) = mrYes;
+    exit(True);
+  Result := MessageDlg(FRemoveConfirmTitle, FRemoveConfirmMessage + ' "' + FTags[idx] + '"?', mtConfirmation, [mbYes, mbNo], 0) = mrYes;
 end;
 
 procedure TTagEdit.AddTag(const ATag: string);
@@ -716,8 +717,7 @@ begin
   end;
 
   // Backspace removes last tag if edit is empty
-  if (Key = VK_BACK) and (FEdit.Text = string.Empty) and (FTags.Count > 0)
-    and RemovalConfirmed(FTags.Count - 1) then
+  if (Key = VK_BACK) and (FEdit.Text = string.Empty) and (FTags.Count > 0) and RemovalConfirmed(FTags.Count - 1) then
   begin
     ATag := FTags[FTags.Count - 1];
     FTags.Delete(FTags.Count - 1);
@@ -785,7 +785,7 @@ begin
     UpdateHoverState(X, Y);
 
   // Start dragging only if mouse moved beyond threshold and we have a valid tag index
-  if not FReadOnly and not FDragging and (ssLeft in Shift) and (FMouseDownIndex >= 0) then
+  if FAllowReorder and not FReadOnly and not FDragging and (ssLeft in Shift) and (FMouseDownIndex >= 0) then
   begin
     DragThreshold := Scale(5); // pixels
     if (Abs(X - FMouseDownPos.X) > DragThreshold) or (Abs(Y - FMouseDownPos.Y) > DragThreshold) then
