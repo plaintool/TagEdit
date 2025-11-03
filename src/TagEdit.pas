@@ -716,7 +716,8 @@ begin
   end;
 
   // Backspace removes last tag if edit is empty
-  if (Key = VK_BACK) and (FEdit.Text = string.Empty) and (FTags.Count > 0) then
+  if (Key = VK_BACK) and (FEdit.Text = string.Empty) and (FTags.Count > 0)
+    and RemovalConfirmed(FTags.Count - 1) then
   begin
     ATag := FTags[FTags.Count - 1];
     FTags.Delete(FTags.Count - 1);
