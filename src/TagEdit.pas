@@ -328,7 +328,7 @@ end;
 procedure TTagEdit.SetReadOnly(Value: boolean);
 begin
   FReadOnly := Value;
-  FEdit.Visible := not Value;
+  FEdit.Visible := not Value and FEnabled;
   Invalidate;
 end;
 
@@ -336,7 +336,7 @@ procedure TTagEdit.SetEnabled(Value: boolean);
 begin
   inherited;
   FEnabled := Value;
-  FEdit.Visible := Value;
+  FEdit.Visible := Value and not FReadOnly;
 end;
 
 procedure TTagEdit.SetAutoSizeHeight(Value: boolean);
