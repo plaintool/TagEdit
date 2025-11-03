@@ -299,7 +299,7 @@ procedure TTagEdit.FontChanged(Sender: TObject);
 begin
   inherited;
   FEdit.Font.Assign(Font);
-  if (Assigned(Parent)) and (not FFont.IsEqual(Parent.Font)) and (FFont.Size > 0) then
+  if (Assigned(Parent)) and (not FFont.IsEqual(Parent.Font)) and (not FFont.IsDefault) then
     FParentFont := False;
   Invalidate;
   UpdateAutoHeight;
@@ -313,7 +313,8 @@ end;
 procedure TTagEdit.ScaleFontsPPI(const AToPPI: integer; const AProportion: double);
 begin
   inherited ScaleFontsPPI(AToPPI, AProportion);
-  if FFont.Size = 0 then FFont.Size := CoalesceInt(Screen.SystemFont.Size, 8);
+  if ((not FParentFont) and (FFont.Size <= 0)) or ((FParentFont) and (Assigned(Parent)) and (Parent.Font.Size <= 0)) then
+    FFont.Size := CoalesceInt(Screen.SystemFont.Size, 8);
   DoScaleFontPPI(FFont, AToPPI, AProportion);
   if (Assigned(Parent)) and (FParentFont) then
     DoScaleFontPPI(Parent.Font, AToPPI, AProportion);
@@ -322,7 +323,8 @@ end;
 procedure TTagEdit.FixDesignFontsPPI(const ADesignTimePPI: integer);
 begin
   inherited FixDesignFontsPPI(ADesignTimePPI);
-  if FFont.Size = 0 then FFont.Size := CoalesceInt(Screen.SystemFont.Size, 8);
+  if ((not FParentFont) and (FFont.Size <= 0)) or ((FParentFont) and (Assigned(Parent)) and (Parent.Font.Size <= 0)) then
+    FFont.Size := CoalesceInt(Screen.SystemFont.Size, 8);
   DoFixDesignFontPPI(FFont, ADesignTimePPI);
   if (Assigned(Parent)) and (FParentFont) then
     DoFixDesignFontPPI(Parent.Font, ADesignTimePPI);
