@@ -12,6 +12,7 @@ A versatile tag management control for Lazarus/FPC with advanced features.
 
 - **🏷️ Tag Management**
   - Add tags by typing and pressing Enter
+  - Tags with suffix
   - Remove tags with click confirmation
   - Prevent duplicate tags
 
@@ -24,6 +25,8 @@ A versatile tag management control for Lazarus/FPC with advanced features.
   - Custom tag colors and hover effects
   - Adjustable border styles and widths
   - Rounded corners support
+  - Random color for tag name if not defined
+  - Tag color collection, assigns colors based on tag name match
   - Font and size customization
 
 - **📐 Smart Layout**
@@ -47,28 +50,57 @@ A versatile tag management control for Lazarus/FPC with advanced features.
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `Items` | TStringList | Collection of tag strings |
+| `Align` | TAlign | Control alignment within parent |
+| `Anchors` | TAnchors | Anchor points for responsive layout |
+| `AutoColorBrightness` | Integer | Brightness percentage for auto-generated tag colors (0-100) |
 | `AutoSizeHeight` | Boolean | Auto-adjust height based on content |
-| `TagColor` | TColor | Background color of tags |
-| `TagHoverColor` | TColor | Color on mouse hover |
-| `TagBorderColor` | TColor | Border color of tags |
-| `TagBorderWidth` | Integer | Border width of tags |
 | `BorderColor` | TColor | Component border color |
 | `BorderWidth` | Integer | Component border width |
-| `RoundCorners` | Integer | Corner radius for tags |
+| `CloseButtons` | Boolean | Show close buttons on tags |
+| `CloseButtonOnHover` | Boolean | Show close buttons only on hover |
+| `Color` | TColor | Background color of the component |
 | `EditMinWidth` | Integer | Minimum width of edit box |
-| `RemoveConfirm` | Boolean | Show confirmation when removing tags |
-| `RemoveConfirmTitle` | String | Title for remove confirmation dialog |
-| `RemoveConfirmMessage` | String | Message for remove confirmation dialog |
-| `ParentFont` | Boolean | Use parent component's font |
-| `ReadOnly` | Boolean | Read-only mode (no tag editing) |
+| `Enabled` | Boolean | Enable/disable the component |
 | `Font` | TFont | Font used for tags and edit box |
+| `Height` | Integer | Component height |
+| `Items` | TStringList | Collection of tag strings |
+| `ParentFont` | Boolean | Use parent component's font |
+| `PopupMenu` | TPopupMenu | Popup menu for the component |
+| `ReadOnly` | Boolean | Read-only mode (no tag editing) |
+| `RemoveConfirm` | Boolean | Show confirmation when removing tags |
+| `RemoveConfirmMessage` | String | Message for remove confirmation dialog |
+| `RemoveConfirmTitle` | String | Title for remove confirmation dialog |
+| `RoundCorners` | Integer | Corner radius for tags |
+| `ShowHint` | Boolean | Show hint tooltips |
+| `Tag` | Integer | User-defined tag value |
+| `TagBorderColor` | TColor | Border color of tags |
+| `TagBorderWidth` | Integer | Border width of tags |
+| `TagColor` | TColor | Background color of tags |
+| `TagColors` | TTagColorItems | Collection of custom tag colors |
+| `TagHoverColor` | TColor | Color on mouse hover |
+| `TagHoverUnderline` | Boolean | Underline tag text on hover |
+| `TagSuffixColor` | TColor | Background color for tag suffix (after colon) |
+| `Visible` | Boolean | Control visibility |
+| `Width` | Integer | Component width |
 
 ## Events
 
-- `OnTagAdd` - Fired when a tag is added
-- `OnTagRemove` - Fired when a tag is removed  
-- `OnTagClick` - Fired when a tag is clicked
+| Event | Type | Description |
+|-------|------|-------------|
+| `OnClick` | TNotifyEvent | Occurs when component is clicked |
+| `OnDblClick` | TNotifyEvent | Occurs when component is double-clicked |
+| `OnKeyDown` | TKeyEvent | Occurs when key is pressed |
+| `OnKeyPress` | TKeyPressEvent | Occurs when key is pressed (character) |
+| `OnKeyUp` | TKeyEvent | Occurs when key is released |
+| `OnMouseDown` | TMouseEvent | Occurs when mouse button is pressed |
+| `OnMouseEnter` | TNotifyEvent | Occurs when mouse enters component |
+| `OnMouseLeave` | TNotifyEvent | Occurs when mouse leaves component |
+| `OnMouseMove` | TMouseMoveEvent | Occurs when mouse moves over component |
+| `OnMouseUp` | TMouseEvent | Occurs when mouse button is released |
+| `OnTagAdd` | TTagEvent | Occurs when a new tag is added |
+| `OnTagClick` | TTagEvent | Occurs when a tag is clicked |
+| `OnTagPopup` | TTagPopupEvent | Occurs when context menu is requested for a tag |
+| `OnTagRemove` | TTagEvent | Occurs when a tag is removed |
 
 # Installation
 
