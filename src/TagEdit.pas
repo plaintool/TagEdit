@@ -5,7 +5,7 @@ unit TagEdit;
 interface
 
 uses
-  Classes, SysUtils, Controls, StdCtrls, Graphics, Types, Forms, Dialogs, LCLType, LCLIntf;
+  Classes, SysUtils, Controls, StdCtrls, Graphics, Math, Types, Forms, Dialogs, LCLType, LCLIntf;
 
 type
   TTagEvent = procedure(Sender: TObject; const TagText: string) of object;
@@ -18,15 +18,20 @@ type
     FEdit: TEdit;
     FColor: TColor;
     FTagColor: TColor;
+    FTagSuffixColor: TColor;
     FTagBorderColor: TColor;
     FBorderColor: TColor;
     FTagHoverColor: TColor;
 
     FAutoSizeHeight: boolean;
     FAllowReorder: boolean;
+    FTagHoverUnderline: boolean;
+    FCloseButtons: boolean;
+    FCloseButtonOnHover: boolean;
     FReadOnly: boolean;
     FEnabled: boolean;
 
+    FAutoColorBrigtness: integer;
     FBorderWidth: integer;
     FRoundCorners: integer;
     FTagBorderWidth: integer;
@@ -70,6 +75,8 @@ type
     procedure SetAutoSizeHeight(Value: boolean);
     procedure UpdateAutoHeight;
     function Scale(const AValue: integer): integer;
+    function RandTagColor(const TagName: string; BrightnessPercent: integer = 70): TColor;
+    function GetContrastTextColor(BackColor, FontColor: TColor; MidLevel: integer = 128): TColor;
   protected
     procedure Paint; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: integer); override;
@@ -104,9 +111,14 @@ type
     property Font: TFont read FFont write SetFont;
     property AutoSizeHeight: boolean read FAutoSizeHeight write SetAutoSizeHeight default False;
     property AllowReorder: boolean read FAllowReorder write FAllowReorder default True;
-    property TagColor: TColor read FTagColor write FTagColor default clBtnFace;
-    property TagHoverColor: TColor read FTagHoverColor write FTagHoverColor default clSkyBlue;
-    property TagBorderColor: TColor read FTagBorderColor write FTagBorderColor default clWindowFrame;
+    property TagHoverUnderline: boolean read FTagHoverUnderline write FTagHoverUnderline default True;
+    property CloseButtons: boolean read FCloseButtons write FCloseButtons default True;
+    property CloseButtonOnHover: boolean read FCloseButtonOnHover write FCloseButtonOnHover default True;
+    property TagColor: TColor read FTagColor write FTagColor default clNone;
+    property TagSuffixColor: TColor read FTagSuffixColor write FTagSuffixColor default clNone;
+    property TagHoverColor: TColor read FTagHoverColor write FTagHoverColor default clMenuHighlight;
+    property TagBorderColor: TColor read FTagBorderColor write FTagBorderColor default clNone;
+    property AutoColorBrigtness: integer read FAutoColorBrigtness write FAutoColorBrigtness default 0;
     property TagBorderWidth: integer read FTagBorderWidth write FTagBorderWidth default 0;
     property BorderColor: TColor read FBorderColor write FBorderColor default clWindowFrame;
     property BorderWidth: integer read FBorderWidth write FBorderWidth default 0;
@@ -155,20 +167,26 @@ begin
   FFont := TFont.Create;
   FFont.OnChange := @FontChanged;
   FParentFont := True;
+  FTagHoverUnderline := True;
+  FCloseButtons := True;
+  FCloseButtonOnHover := True;
 
   FTags := TStringList.Create;
+  FTags.CaseSensitive := True;
   FTags.Add('Lazarus');
   FTags.Add('Free Pascal');
 
   FTags.OnChange := @TagsChanged;
 
-  FTagColor := clBtnFace;
-  FTagHoverColor := clSkyBlue;
-  FTagBorderColor := clWindowFrame;
+  FTagColor := clNone;
+  FTagSuffixColor := clNone;
+  FTagHoverColor := clMenuHighlight;
+  FTagBorderColor := clNone;
   FTagBorderWidth := 0;
   FBorderColor := clWindowFrame;
   FEditMinWidth := Scale(50);
   FRoundCorners := Scale(5);
+  FAutoColorBrigtness := 80;
 
   // Create inner edit control
   FEdit := TEdit.Create(Self);
@@ -546,16 +564,106 @@ begin
   UpdateAutoHeight;
 end;
 
+function TTagEdit.RandTagColor(const TagName: string; BrightnessPercent: integer = 70): TColor;
+var
+  Hash: longword;
+  R, G, B: byte;
+  S: single;
+  i, MaxVal, MinVal: integer;
+begin
+  // Clamp brightness range to [0..100]
+  if BrightnessPercent < 0 then BrightnessPercent := 0;
+  if BrightnessPercent > 100 then BrightnessPercent := 100;
+
+  // Generate stable hash (FNV-1a)
+  Hash := 2166136267;
+  for i := 1 to Length(TagName) do
+    Hash := (Hash xor Ord(TagName[i])) * 16777619;
+
+  // Extract RGB components from hash
+  R := (Hash and $FF);
+  G := (Hash shr 8) and $FF;
+  B := (Hash shr 16) and $FF;
+
+  // Boost saturation slightly if too gray
+  MaxVal := MaxIntValue([R, G, B]);
+  MinVal := MinIntValue([R, G, B]);
+  if (MaxVal - MinVal) < 60 then
+  begin
+    if MaxVal < 200 then
+    begin
+      R := Min(255, R + 60);
+      G := Min(255, G + 40);
+      B := Min(255, B + 40);
+    end;
+  end;
+
+  // --- Apply brightness adjustment ---
+  // Convert BrightnessPercent (0–100) to S (0.0–2.0)
+  // 50% = original color, >50 brighten, <50 darken
+  S := 0.5 + (BrightnessPercent / 100);
+
+  R := Min(255, Round(R * S));
+  G := Min(255, Round(G * S));
+  B := Min(255, Round(B * S));
+
+  Result := RGBToColor(R, G, B);
+end;
+
+function TTagEdit.GetContrastTextColor(BackColor, FontColor: TColor; MidLevel: integer = 128): TColor;
+var
+  Rb, Gb, Bb: byte; // background
+  Rf, Gf, Bf: byte; // font
+  Brightness: double;
+  InvR, InvG, InvB: integer;
+begin
+  // Ensure MidLevel in 0..255
+  if MidLevel < 0 then MidLevel := 0;
+  if MidLevel > 255 then MidLevel := 255;
+
+  // Extract RGB from both colors
+  BackColor := ColorToRGB(BackColor);
+  FontColor := ColorToRGB(FontColor);
+
+  Rb := GetRValue(BackColor);
+  Gb := GetGValue(BackColor);
+  Bb := GetBValue(BackColor);
+
+  Rf := GetRValue(FontColor);
+  Gf := GetGValue(FontColor);
+  Bf := GetBValue(FontColor);
+
+  // Calculate perceived brightness of background
+  Brightness := 0.299 * Rb + 0.587 * Gb + 0.114 * Bb;
+
+  // Invert the given font color
+  InvR := 255 - Rf;
+  InvG := 255 - Gf;
+  InvB := 255 - Bf;
+
+  // If background is dark — make inverted color lighter (toward white)
+  // If background is light — make inverted color darker (toward black)
+  if Brightness < MidLevel then
+  begin
+    InvR := EnsureRange(Round(InvR), 0, 255);
+    InvG := EnsureRange(Round(InvG), 0, 255);
+    InvB := EnsureRange(Round(InvB), 0, 255);
+    Result := RGBToColor(InvR, InvG, InvB);
+  end
+  else
+    Result := FontColor;
+end;
+
 procedure TTagEdit.DrawTags;
 var
   i: integer;
   R: TRect;
-  s: string;
-  X, Y, W, H, M: integer;
+  s, Part1, Part2: string;
+  X, Y, W, H, M, SepW: integer;
   AvailWidth: integer;
-  CurrentTagColor: TColor;
+  Color1, Color2: TColor;
+  HasColon, Hover: boolean;
 begin
-  // Calculate available width considering border
   AvailWidth := ClientWidth - Scale(8);
   if FBorderWidth > 0 then
     Dec(AvailWidth, 2 * FBorderWidth);
@@ -570,10 +678,24 @@ begin
   for i := 0 to FTags.Count - 1 do
   begin
     s := FTags[i];
+    Hover := (i = FHoverIndex) and (FTagHoverColor <> clNone);
+
+    // Split tag by colon
+    HasColon := Pos(':', s) > 0;
+    if HasColon then
+    begin
+      Part1 := Trim(Copy(s, 1, Pos(':', s) - 1)) + ' ';
+      Part2 := Trim(Copy(s, Pos(':', s) + 1, MaxInt));
+    end
+    else
+    begin
+      Part1 := s;
+      Part2 := '';
+    end;
+
     M := GetTagHeight;
     W := Canvas.TextWidth(s) + M;
 
-    // Move to next line if tag doesn't fit
     if (i > 0) and ((X + W) > AvailWidth) then
     begin
       X := Scale(4);
@@ -583,39 +705,105 @@ begin
     R := Rect(X, Y, X + W, Y + H);
     FTagRects[i] := R;
 
-    // Determine tag color (hover or normal)
-    if (i = FHoverIndex) and (FTagHoverColor <> clNone) then
-      CurrentTagColor := FTagHoverColor
-    else
-      CurrentTagColor := FTagColor;
-
-    // Draw background
     Canvas.Pen.Width := FTagBorderWidth;
     Canvas.Pen.Color := FTagBorderColor;
-    Canvas.Brush.Color := CurrentTagColor;
     if FTagBorderWidth <= 0 then
       Canvas.Pen.Style := psClear
     else
       Canvas.Pen.Style := psSolid;
 
-    Canvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom, FRoundCorners, FRoundCorners);
+    if HasColon then
+    begin
+      if Hover then
+        Color1 := FTagHoverColor
+      else
+      if FTagColor <> clNone then
+        Color1 := FTagColor
+      else
+        Color1 := RandTagColor(Part1, FAutoColorBrigtness);
 
+      if FTagSuffixColor <> clNone then
+        Color2 := FTagSuffixColor
+      else
+        Color2 := RandTagColor(Part2, FAutoColorBrigtness);
 
-    // Draw tag text
-    Canvas.Brush.Style := bsClear;
-    Canvas.Font.Color := Font.Color;
+      if Hover then
+        Canvas.Pen.Color := FTagHoverColor
+      else
+      if FTagBorderColor = clNone then
+        Canvas.Pen.Color := Color1;
 
-    if (FReadOnly) then
+      SepW := Canvas.TextWidth(Part1) + Scale(6); // width of first part + left padding
+
+      // Left part background
+      Canvas.Brush.Color := Color1;
+      Canvas.RoundRect(R.Left, R.Top, R.Left + SepW, R.Bottom, FRoundCorners, FRoundCorners);
+
+      // Right part background
+      Canvas.Brush.Color := Color2;
+      Canvas.RoundRect(R.Left + SepW, R.Top, R.Right, R.Bottom, FRoundCorners, FRoundCorners);
+
+      // Fill junction to avoid double-rounded corner visual
+      Canvas.Brush.Color := Color1;
+      Canvas.FillRect(R.Left + SepW - FRoundCorners, R.Top, R.Left + SepW, R.Bottom - 1);
+      Canvas.Brush.Color := Color2;
+      Canvas.FillRect(R.Left + SepW, R.Top, R.Left + SepW + FRoundCorners, R.Bottom - 1);
+
+      if (FTagBorderWidth > 0) then
+      begin
+        Canvas.Brush.Color := Canvas.Pen.Color;
+        Canvas.FillRect(R.Left + SepW - FRoundCorners, R.Top - (FTagBorderWidth div 2), R.Left + SepW + FRoundCorners,
+          R.Top + FTagBorderWidth - (FTagBorderWidth div 2));
+        Canvas.FillRect(R.Left + SepW - FRoundCorners, R.Bottom - (FTagBorderWidth div 2) - 1, R.Left + SepW +
+          FRoundCorners, R.Bottom + FTagBorderWidth - (FTagBorderWidth div 2) - 1);
+      end;
+    end
+    else
+    begin
+      if Hover then
+        Canvas.Brush.Color := FTagHoverColor
+
+      else if FTagColor <> clNone then
+        Canvas.Brush.Color := FTagColor
+      else
+        Canvas.Brush.Color := RandTagColor(s, FAutoColorBrigtness);
+
+      if Hover then
+        Canvas.Pen.Color := FTagHoverColor
+      else
+      if FTagBorderColor = clNone then
+        Canvas.Pen.Color := Canvas.Brush.Color;
+
+      Canvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom, FRoundCorners, FRoundCorners);
+    end;
+
+    // Calculate shift
+    if (FReadOnly) or (not CloseButtons) or (FCloseButtonOnHover and not Hover) then
       M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 8) * 1.3) + 2)
     else
       M := 0;
 
-    Canvas.TextOut(R.Left + Scale(6) + M div 2, R.Top + Scale(2), s);
-
-    // Draw '×' button
-    if (not FReadOnly) then
+    // Draw text
+    Canvas.Brush.Style := bsClear;
+    Canvas.Font.Underline := FTagHoverUnderline and Hover;
+    if HasColon then
     begin
-      Canvas.Font.Color := clGray;
+      Canvas.Font.Color := GetContrastTextColor(Color1, Font.Color);
+      Canvas.TextOut(R.Left + Scale(6), R.Top + Scale(2), Part1);
+
+      Canvas.Font.Color := GetContrastTextColor(Color2, Font.Color);
+      Canvas.TextOut(R.Left + SepW + Scale(2) + M div 3, R.Top + Scale(2), Part2);
+    end
+    else
+    begin
+      Canvas.Font.Color := GetContrastTextColor(Canvas.Brush.Color, Font.Color, 128);
+      Canvas.TextOut(R.Left + Scale(6) + M div 2, R.Top + Scale(2), s);
+    end;
+
+    // Draw '×' button if not read-only
+    if (not FReadOnly) and (FCloseButtons) and (not FCloseButtonOnHover or Hover) then
+    begin
+      Canvas.Font.Underline := False;
       M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 8) * 1.3) + 2);
       Canvas.TextOut(R.Right - M, R.Top + Scale(2), '×');
     end;
@@ -751,7 +939,7 @@ begin
     FMouseDownIndex := idx;
     FMouseDownPos := Point(X, Y);
 
-    if (not FReadOnly) and (idx >= 0) then
+    if (not FReadOnly) and (FCloseButtons) and (idx >= 0) then
     begin
       R := GetTagRect(idx);
       M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 8) * 1.3) + 2);
@@ -875,7 +1063,7 @@ begin
       if (idx = FMouseDownIndex) and (idx >= 0) then
       begin
         R := GetTagRect(idx);
-        if ReadOnly then
+        if FReadOnly or not FCloseButtons then
           M := 0
         else
           M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 8) * 1.3) + 2);
@@ -918,11 +1106,16 @@ begin
 end;
 
 procedure TTagEdit.MouseLeave;
+var
+  Form: TCustomForm;
 begin
   inherited MouseLeave;
   if csDesigning in ComponentState then exit;
 
-  if FHoverIndex <> -1 then
+  Form := GetParentForm(Self);
+  if (Form <> nil) and (not Form.Active) then Exit;
+
+  if (FHoverIndex <> -1) then
   begin
     FHoverIndex := -1;
     Invalidate;
