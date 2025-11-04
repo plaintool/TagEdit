@@ -139,11 +139,11 @@ type
     property CloseButtons: boolean read FCloseButtons write FCloseButtons default True;
     property CloseButtonOnHover: boolean read FCloseButtonOnHover write FCloseButtonOnHover default True;
     property TagColor: TColor read FTagColor write FTagColor default clNone;
-    property TagSuffixColor: TColor read FTagSuffixColor write FTagSuffixColor default clNone;
+    property TagSuffixColor: TColor read FTagSuffixColor write FTagSuffixColor default clWhite;
     property TagHoverColor: TColor read FTagHoverColor write FTagHoverColor default clMenuHighlight;
     property TagBorderColor: TColor read FTagBorderColor write FTagBorderColor default clNone;
-    property AutoColorBrigtness: integer read FAutoColorBrigtness write FAutoColorBrigtness default 0;
-    property TagBorderWidth: integer read FTagBorderWidth write FTagBorderWidth default 0;
+    property AutoColorBrigtness: integer read FAutoColorBrigtness write FAutoColorBrigtness default 80;
+    property TagBorderWidth: integer read FTagBorderWidth write FTagBorderWidth default 2;
     property BorderColor: TColor read FBorderColor write FBorderColor default clWindowFrame;
     property BorderWidth: integer read FBorderWidth write FBorderWidth default 0;
     property RoundCorners: integer read FRoundCorners write FRoundCorners default 5;
@@ -202,16 +202,16 @@ begin
 
   FTags := TStringList.Create;
   FTags.CaseSensitive := True;
-  FTags.Add('Lazarus');
+  FTags.Add('IDE:Lazarus');
   FTags.Add('Free Pascal');
 
   FTags.OnChange := @TagsChanged;
 
   FTagColor := clNone;
-  FTagSuffixColor := clNone;
+  FTagSuffixColor := clWhite;
   FTagHoverColor := clMenuHighlight;
   FTagBorderColor := clNone;
-  FTagBorderWidth := 0;
+  FTagBorderWidth := 2;
   FBorderColor := clWindowFrame;
   FEditMinWidth := Scale(50);
   FRoundCorners := Scale(5);
@@ -505,7 +505,11 @@ begin
     if (FEdit.Left <> NewLeft) or (FEdit.Top <> NewTop) then
     begin
       FEdit.Left := NewLeft;
-      FEdit.Top := NewTop;
+      {$IFDEF UNIX}
+      FEdit.Top := NewTop +Scale(1);
+      {$ELSE}
+      FEdit.Top := NewTop + Scale(3);
+      {$ENDIF}
     end;
 
     // Set Edit width
@@ -852,15 +856,15 @@ begin
     if HasColon then
     begin
       Canvas.Font.Color := GetContrastTextColor(Color1, Font.Color);
-      Canvas.TextOut(R.Left + Scale(6), R.Top + Scale(2), Part1);
+      Canvas.TextOut(R.Left + Scale(4), R.Top + Scale(3), Part1);
 
       Canvas.Font.Color := GetContrastTextColor(Color2, Font.Color);
-      Canvas.TextOut(R.Left + SepW + Scale(2) + M div 3, R.Top + Scale(2), Part2);
+      Canvas.TextOut(R.Left + SepW + Scale(2) + M div 3, R.Top + Scale(3), Part2);
     end
     else
     begin
       Canvas.Font.Color := GetContrastTextColor(Canvas.Brush.Color, Font.Color, 128);
-      Canvas.TextOut(R.Left + Scale(6) + M div 2, R.Top + Scale(2), s);
+      Canvas.TextOut(R.Left + Scale(4) + M div 2, R.Top + Scale(3), s);
     end;
 
     // Draw '×' button if not read-only
@@ -868,7 +872,7 @@ begin
     begin
       Canvas.Font.Underline := False;
       M := Scale(Round(CoalesceInt(Font.Size, Screen.SystemFont.Size, 8) * 1.3) + 2);
-      Canvas.TextOut(R.Right - M, R.Top + Scale(2), '×');
+      Canvas.TextOut(R.Right - M, R.Top + Scale(4), '×');
     end;
 
     Inc(X, W + Scale(4));
