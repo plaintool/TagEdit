@@ -40,6 +40,7 @@ type
     FTagBorderColor: TColor;
     FBorderColor: TColor;
     FTagHoverColor: TColor;
+    FDragIndicatorColor: TColor;
     FTagColors: TTagColorItems;
 
     FAutoSizeHeight: boolean;
@@ -142,6 +143,7 @@ type
     property TagSuffixColor: TColor read FTagSuffixColor write FTagSuffixColor default clWhite;
     property TagHoverColor: TColor read FTagHoverColor write FTagHoverColor default clMenuHighlight;
     property TagBorderColor: TColor read FTagBorderColor write FTagBorderColor default clNone;
+    property DragIndicatorColor: TColor read FDragIndicatorColor write FDragIndicatorColor default clHighlight;
     property AutoColorBrigtness: integer read FAutoColorBrigtness write FAutoColorBrigtness default 80;
     property TagBorderWidth: integer read FTagBorderWidth write FTagBorderWidth default 2;
     property BorderColor: TColor read FBorderColor write FBorderColor default clWindowFrame;
@@ -211,6 +213,7 @@ begin
   FTagHoverColor := clMenuHighlight;
   FTagBorderColor := clNone;
   FTagBorderWidth := 2;
+  FDragIndicatorColor := clHighlight;
   FBorderColor := clWindowFrame;
   FEditMinWidth := Scale(50);
   FRoundCorners := Scale(5);
@@ -907,7 +910,7 @@ begin
   if not (csDesigning in ComponentState) and FDragging and (FDropIndex >= 0) and (FDropIndex <= FTags.Count) then
   begin
     Canvas.Pen.Width := 2;
-    Canvas.Pen.Color := clHighlight;
+    Canvas.Pen.Color := FDragIndicatorColor;
     Canvas.Pen.Style := psSolid;
     if FDropIndex < FTags.Count then
     begin
