@@ -616,8 +616,9 @@ begin
 
   // Generate stable hash (FNV-1a)
   Hash := 2166136267;
-  for i := 1 to Length(TagName) do
-    Hash := (Hash xor Ord(TagName[i])) * 16777619;
+  if TagName <> string.Empty then
+    for i := 1 to Length(TagName) do
+      Hash := longword(uint64(Hash xor Ord(TagName[i])) * 16777619);
 
   // Extract RGB components from hash
   R := (Hash and $FF);
