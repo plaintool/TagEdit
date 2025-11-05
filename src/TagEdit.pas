@@ -181,6 +181,14 @@ implementation
 constructor TTagEdit.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FTagColors := TTagColorItems.Create(Self);
+
+  FTags := TStringList.Create;
+  FTags.OnChange := @TagsChanged;
+  FTags.CaseSensitive := True;
+  FTags.Add('IDE:Lazarus');
+  FTags.Add('Free Pascal');
+
   Height := Scale(32);
   Width := Scale(300);
   FColor := clWindow;
@@ -197,15 +205,6 @@ begin
   FCloseButtons := True;
   FCloseButtonOnHover := True;
   PopupMenu := nil;
-
-  FTagColors := TTagColorItems.Create(Self);
-
-  FTags := TStringList.Create;
-  FTags.CaseSensitive := True;
-  FTags.Add('IDE:Lazarus');
-  FTags.Add('Free Pascal');
-
-  FTags.OnChange := @TagsChanged;
 
   FTagColor := clNone;
   FTagSuffixColor := clWhite;
@@ -249,6 +248,7 @@ begin
   FTags.Free;
   FFont.Free;
   FEdit.Free;
+  FTagColors.Free;
   inherited Destroy;
 end;
 

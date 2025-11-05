@@ -15,7 +15,6 @@ uses
 
 type
   { TTagColorItem }
-  // Represents one pair: Tag name -> Color
   TTagColorItem = class(TCollectionItem)
   private
     FTagName: string;
@@ -23,23 +22,20 @@ type
     procedure SetTag(const AValue: string);
     procedure SetColor(AValue: TColor);
   published
-    // Tag name
     property TagName: string read FTagName write SetTag;
-    // Color associated with the tag
     property Color: TColor read FColor write SetColor default clNone;
   end;
 
   { TTagColorItems }
-  // Collection container for TTagColorItem. Owned by a component (owner = component/TPersistent)
   TTagColorItems = class(TOwnedCollection)
   private
-    function GetItem(Index: Integer): TTagColorItem;
-    procedure SetItem(Index: Integer; const Value: TTagColorItem);
+    function GetItem(Index: integer): TTagColorItem;
+    procedure SetItem(Index: integer; const Value: TTagColorItem);
   public
     constructor Create(AOwner: TPersistent);
     function Add(const ATag: string; AColor: TColor): TTagColorItem;
-    function IndexOf(const ATag: string): Integer;
-    property Items[Index: Integer]: TTagColorItem read GetItem write SetItem; default;
+    function IndexOf(const ATag: string): integer;
+    property Items[Index: integer]: TTagColorItem read GetItem write SetItem; default;
   end;
 
 implementation
@@ -48,35 +44,31 @@ implementation
 
 procedure TTagColorItem.SetTag(const AValue: string);
 begin
-  if FTagName = AValue then Exit;
-  FTagName := AValue;
-  // notify owner collection that item changed (will trigger streaming / Invalidate if needed)
-  Changed(False);
+  if FTagName <> AValue then
+    FTagName := AValue;
 end;
 
 procedure TTagColorItem.SetColor(AValue: TColor);
 begin
-  if FColor = AValue then Exit;
-  FColor := AValue;
-  Changed(False);
+  if FColor <> AValue then
+    FColor := AValue;
 end;
 
 { TTagColorItems }
 
 constructor TTagColorItems.Create(AOwner: TPersistent);
 begin
-  // Create collection of TTagColorItem items
   inherited Create(AOwner, TTagColorItem);
 end;
 
-function TTagColorItems.GetItem(Index: Integer): TTagColorItem;
+function TTagColorItems.GetItem(Index: integer): TTagColorItem;
 begin
-  Result := TTagColorItem(inherited Items[Index]);
+  Result := TTagColorItem(inherited GetItem(Index));
 end;
 
-procedure TTagColorItems.SetItem(Index: Integer; const Value: TTagColorItem);
+procedure TTagColorItems.SetItem(Index: integer; const Value: TTagColorItem);
 begin
-  Items[Index].Assign(Value);
+  inherited SetItem(Index, Value);
 end;
 
 function TTagColorItems.Add(const ATag: string; AColor: TColor): TTagColorItem;
@@ -84,12 +76,11 @@ begin
   Result := TTagColorItem(inherited Add);
   Result.FTagName := ATag;
   Result.FColor := AColor;
-  Result.Changed(False);
 end;
 
-function TTagColorItems.IndexOf(const ATag: string): Integer;
+function TTagColorItems.IndexOf(const ATag: string): integer;
 var
-  i: Integer;
+  i: integer;
 begin
   for i := 0 to Count - 1 do
     if Items[i].TagName = ATag then
@@ -98,4 +89,3 @@ begin
 end;
 
 end.
-
