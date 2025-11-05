@@ -65,9 +65,6 @@ SOFTWARE."/>
       <Item>
         <PackageName Value="LCLBase"/>
       </Item>
-      <Item>
-        <PackageName Value="FCL"/>
-      </Item>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>
