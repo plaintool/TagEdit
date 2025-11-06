@@ -76,6 +76,7 @@ type
     FOnTagRemove: TTagEvent;
     FOnTagClick: TTagEvent;
     FOnTagPopup: TTagPopupEvent;
+    FOnChange: TNotifyEvent;
 
     procedure EditKeyDown(Sender: TObject; var Key: word; Shift: TShiftState);
     procedure EditExit(Sender: TObject);
@@ -123,12 +124,15 @@ type
     function CalculateAutoHeight: integer;
     procedure ScaleFontsPPI(const AToPPI: integer; const AProportion: double); override;
     procedure FixDesignFontsPPI(const ADesignTimePPI: integer); override;
+    function Focused: boolean; override;
   published
     property Align;
     property Anchors;
     property Visible;
     property ShowHint;
     property PopupMenu;
+    property DoubleBuffered;
+    property ParentDoubleBuffered;
     property Height default 32;
     property Width default 300;
     property Tag default 0;
@@ -164,6 +168,7 @@ type
     property OnTagRemove: TTagEvent read FOnTagRemove write FOnTagRemove;
     property OnTagClick: TTagEvent read FOnTagClick write FOnTagClick;
     property OnTagPopup: TTagPopupEvent read FOnTagPopup write FOnTagPopup;
+    property OnChange: TNotifyEvent read FOnChange write FOnChange;
     property OnClick;
     property OnDblClick;
     property OnMouseDown;
@@ -224,11 +229,14 @@ begin
   if not (csDesigning in ComponentState) then
   begin
     FEdit.Parent := Self;
-    FEdit.DoubleBuffered := True;
+    FEdit.DoubleBuffered := FDoubleBuffered;
+    FEdit.BiDiMode := BiDiMode;
     FEdit.ParentFont := True;
     FEdit.BorderStyle := bsNone;
     FEdit.OnKeyDown := @EditKeyDown;
     FEdit.OnExit := @EditExit;
+    FEdit.OnKeyUp := OnKeyUp;
+    FEdit.OnKeyPress := OnKeyPress;
     FEdit.Color := Color;
     FEdit.Left := 4;
     FEdit.Top := 4;
@@ -386,6 +394,11 @@ begin
     DoFixDesignFontPPI(Parent.Font, ADesignTimePPI);
 end;
 
+function TTagEdit.Focused: boolean;
+begin
+  Result := FEdit.Focused;
+end;
+
 procedure TTagEdit.SetReadOnly(Value: boolean);
 begin
   FReadOnly := Value;
@@ -432,6 +445,8 @@ begin
     FEdit.Text := string.Empty;
     if Assigned(FOnTagAdd) then
       FOnTagAdd(Self, ATag);
+    if Assigned(FOnChange) then
+      FOnChange(Self);
     Invalidate;
     UpdateAutoHeight;
   end;
@@ -447,6 +462,8 @@ begin
     FTags.Delete(i);
     if Assigned(FOnTagRemove) then
       FOnTagRemove(Self, ATag);
+    if Assigned(FOnChange) then
+      FOnChange(Self);
     Invalidate;
     UpdateAutoHeight;
   end;
@@ -984,9 +1001,14 @@ begin
     FTags.Delete(FTags.Count - 1);
     if Assigned(FOnTagRemove) then
       FOnTagRemove(Self, ATag);
+    if Assigned(FOnChange) then
+      FOnChange(Self);
     Invalidate;
     UpdateAutoHeight;
   end;
+
+  if Assigned(OnKeyDown) then
+    OnKeyDown(Sender, Key, Shift);
 end;
 
 procedure TTagEdit.EditExit(Sender: TObject);
@@ -1164,6 +1186,9 @@ begin
           FTags.Add(TempTag)
         else
           FTags.Insert(FDropIndex, TempTag);
+
+        if Assigned(FOnChange) then
+          FOnChange(Self);
       end;
       FDragIndex := -1;
       FDropIndex := -1;
