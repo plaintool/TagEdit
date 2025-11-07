@@ -48,10 +48,12 @@ type
     FTagHoverUnderline: boolean;
     FCloseButtons: boolean;
     FCloseButtonOnHover: boolean;
+    FBackspaceEditTag: boolean;
     FReadOnly: boolean;
     FEnabled: boolean;
 
     FAutoColorBrigtness: integer;
+    FAutoColorSeed: longword;
     FBorderWidth: integer;
     FRoundCorners: integer;
     FTagBorderWidth: integer;
@@ -143,12 +145,14 @@ type
     property TagHoverUnderline: boolean read FTagHoverUnderline write FTagHoverUnderline default True;
     property CloseButtons: boolean read FCloseButtons write FCloseButtons default True;
     property CloseButtonOnHover: boolean read FCloseButtonOnHover write FCloseButtonOnHover default True;
+    property BackSpaceEditTag: boolean read FBackspaceEditTag write FBackspaceEditTag default False;
     property TagColor: TColor read FTagColor write FTagColor default clNone;
     property TagSuffixColor: TColor read FTagSuffixColor write FTagSuffixColor default clWhite;
     property TagHoverColor: TColor read FTagHoverColor write FTagHoverColor default clMenuHighlight;
     property TagBorderColor: TColor read FTagBorderColor write FTagBorderColor default clNone;
     property DragIndicatorColor: TColor read FDragIndicatorColor write FDragIndicatorColor default clHighlight;
     property AutoColorBrigtness: integer read FAutoColorBrigtness write FAutoColorBrigtness default 80;
+    property AutoColorSeed: longword read FAutoColorSeed write FAutoColorSeed default 0;
     property TagBorderWidth: integer read FTagBorderWidth write FTagBorderWidth default 2;
     property BorderColor: TColor read FBorderColor write FBorderColor default clWindowFrame;
     property BorderWidth: integer read FBorderWidth write FBorderWidth default 0;
@@ -204,11 +208,15 @@ begin
   FReadOnly := False;
   FEnabled := True;
   FAutoSizeHeight := False;
+  Randomize;
+  // 2166136267
+  FAutoColorSeed := Random(High(longword));
   FAllowReorder := True;
   FFont := TFont.Create;
   FFont.OnChange := @FontChanged;
   FParentFont := True;
   FTagHoverUnderline := True;
+  FBackSpaceEditTag := False;
   FCloseButtons := True;
   FCloseButtonOnHover := True;
   PopupMenu := nil;
@@ -627,6 +635,7 @@ function TTagEdit.RandTagColor(const TagName: string; BrightnessPercent: integer
 var
   Hash: longword;
   R, G, B: byte;
+  Rf, Gf, Bf, MaxValf: single;
   S: single;
   i, MaxVal, MinVal: integer;
 begin
@@ -635,7 +644,7 @@ begin
   if BrightnessPercent > 100 then BrightnessPercent := 100;
 
   // Generate stable hash (FNV-1a)
-  Hash := 2166136267;
+  Hash := FAutoColorSeed;
   if TagName <> string.Empty then
     for i := 1 to Length(TagName) do
       Hash := longword(uint64(Hash xor Ord(TagName[i])) * 16777619);
@@ -659,13 +668,34 @@ begin
   end;
 
   // --- Apply brightness adjustment ---
-  // Convert BrightnessPercent (0–100) to S (0.0–2.0)
-  // 50% = original color, >50 brighten, <50 darken
-  S := 0.5 + (BrightnessPercent / 100);
+  // Convert BrightnessPercent (0-100) to scale factor with minimum brightness
+  // 0% = dark but not completely black, 100% = very bright
+  S := 0.3 + (BrightnessPercent / 100) * 1.7;  // Range: 0.3 to 2.0
 
-  R := Min(255, Round(R * S));
-  G := Min(255, Round(G * S));
-  B := Min(255, Round(B * S));
+  // Use floating point for brightness calculation to avoid overflow
+  Rf := R * S;
+  Gf := G * S;
+  Bf := B * S;
+
+  // --- Avoid too white colors ---
+  // If maximum channel value exceeds 240, scale down all channels proportionally
+  // This prevents colors from being too close to white while preserving hue
+  MaxValf := Rf;
+  if Gf > MaxValf then MaxValf := Gf;
+  if Bf > MaxValf then MaxValf := Bf;
+
+  if MaxValf > 240 then
+  begin
+    // Scale all channels down proportionally to maintain color balance
+    Rf := Rf * 240 / MaxValf;
+    Gf := Gf * 240 / MaxValf;
+    Bf := Bf * 240 / MaxValf;
+  end;
+
+  // Convert back to byte with clamping
+  R := Min(255, Round(Rf));
+  G := Min(255, Round(Gf));
+  B := Min(255, Round(Bf));
 
   Result := RGBToColor(R, G, B);
 end;
@@ -995,10 +1025,16 @@ begin
   end;
 
   // Backspace removes last tag if edit is empty
-  if (Key = VK_BACK) and (FEdit.Text = string.Empty) and (FTags.Count > 0) and RemovalConfirmed(FTags.Count - 1) then
+  if (Key = VK_BACK) and (FEdit.Text = string.Empty) and (FTags.Count > 0) and (FBackspaceEditTag or
+    RemovalConfirmed(FTags.Count - 1)) then
   begin
     ATag := FTags[FTags.Count - 1];
     FTags.Delete(FTags.Count - 1);
+    if FBackSpaceEditTag then
+    begin
+      FEdit.Text := ATag;
+      FEdit.SelStart := FEdit.GetTextLen;
+    end;
     if Assigned(FOnTagRemove) then
       FOnTagRemove(Self, ATag);
     if Assigned(FOnChange) then
