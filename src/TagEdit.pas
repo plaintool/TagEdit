@@ -20,6 +20,7 @@ uses
   Types,
   Forms,
   Dialogs,
+  Clipbrd,
   LCLType,
   LCLIntf,
   TagColorItems;
@@ -130,6 +131,7 @@ type
     procedure ScaleFontsPPI(const AToPPI: integer; const AProportion: double); override;
     procedure FixDesignFontsPPI(const ADesignTimePPI: integer); override;
     function Focused: boolean; override;
+    procedure CopyHoverText;
     function GetTagsBitmap(ATags: TStringList; AFontSize, AWidth, AHeight: integer; ATagHeightDelta: integer = 0;
       ADimness: integer = 0; ABlendColor: TColor = clWhite): TBitmap;
     function BlendColors(Color1, Color2: TColor; Intensity: integer): TColor;
@@ -214,8 +216,8 @@ begin
   FReadOnly := False;
   FEnabled := True;
   FAutoSizeHeight := False;
-  Randomize;
   // 2166136267
+  Randomize;
   FAutoColorSeed := Random(High(longword));
   FAllowReorder := True;
   FFont := TFont.Create;
@@ -709,6 +711,33 @@ begin
   begin
     FHoverIndex := NewHoverIndex;
     Invalidate;
+  end;
+end;
+
+procedure TTagEdit.CopyHoverText;
+var
+  MousePos: TPoint;
+  TagIndex: integer;
+begin
+  // Get current mouse position relative to the control
+  MousePos := ScreenToClient(Mouse.CursorPos);
+
+  // Find which tag is under the cursor
+  TagIndex := TagAtPos(MousePos);
+
+  // Check if we found a valid tag
+  if (TagIndex >= 0) and (TagIndex < FTags.Count) then
+  begin
+    // Copy tag text to clipboard
+    Clipboard.AsText := FTags[TagIndex];
+
+    // Optional: Provide visual feedback
+    // ShowMessage('Copied: ' + FTags[TagIndex]);
+  end
+  else
+  begin
+    // Optional: Handle case when no tag is under cursor
+    // ShowMessage('No tag under cursor to copy');
   end;
 end;
 
