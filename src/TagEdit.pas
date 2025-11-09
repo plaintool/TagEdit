@@ -156,9 +156,9 @@ type
     property BackSpaceEditTag: boolean read FBackspaceEditTag write FBackspaceEditTag default False;
     property TagColor: TColor read FTagColor write FTagColor default clNone;
     property TagSuffixColor: TColor read FTagSuffixColor write FTagSuffixColor default clWhite;
-    property TagHoverColor: TColor read FTagHoverColor write FTagHoverColor default clMenuHighlight;
+    property TagHoverColor: TColor read FTagHoverColor write FTagHoverColor default clHighlight;
     property TagBorderColor: TColor read FTagBorderColor write FTagBorderColor default clNone;
-    property DragIndicatorColor: TColor read FDragIndicatorColor write FDragIndicatorColor default clHighlight;
+    property DragIndicatorColor: TColor read FDragIndicatorColor write FDragIndicatorColor default clRed;
     property AutoColorBrigtness: integer read FAutoColorBrigtness write FAutoColorBrigtness default 80;
     property AutoColorSeed: longword read FAutoColorSeed write FAutoColorSeed default 0;
     property TagBorderWidth: integer read FTagBorderWidth write FTagBorderWidth default 2;
@@ -231,10 +231,10 @@ begin
 
   FTagColor := clNone;
   FTagSuffixColor := clWhite;
-  FTagHoverColor := clMenuHighlight;
+  FTagHoverColor := clHighlight;
   FTagBorderColor := clNone;
   FTagBorderWidth := 2;
-  FDragIndicatorColor := clHighlight;
+  FDragIndicatorColor := clRed;
   FBorderColor := clWindowFrame;
   FEditMinWidth := Scale(50);
   FRoundCorners := Scale(5);
