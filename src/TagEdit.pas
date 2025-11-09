@@ -69,8 +69,9 @@ type
     FMouseDownIndex: integer;
 
     FRemoveConfirm: boolean;
-    FRemoveConfirmMessage: string;
-    FRemoveConfirmTitle: string;
+    FRemoveConfirmMessage: TTranslateString;
+    FRemoveConfirmTitle: TTranslateString;
+    FTextHint: TTranslateString;
 
     FFont: TFont;
     FParentFont: boolean;
@@ -88,6 +89,7 @@ type
     procedure SetFont(Value: TFont);
     procedure SetParentFont(Value: boolean);
     procedure SetReadOnly(Value: boolean);
+    procedure SetTextHint(Value: TTranslateString);
     procedure TagsChanged(Sender: TObject);
     function RemovalConfirmed(idx: integer): boolean;
     function GetTagHeight(AFontSize: integer = -1): integer;
@@ -167,8 +169,9 @@ type
     property RoundCorners: integer read FRoundCorners write FRoundCorners default 5;
     property EditMinWidth: integer read FEditMinWidth write FEditMinWidth default 50;
     property RemoveConfirm: boolean read FRemoveConfirm write FRemoveConfirm default True;
-    property RemoveConfirmTitle: string read FRemoveConfirmTitle write FRemoveConfirmTitle;
-    property RemoveConfirmMessage: string read FRemoveConfirmMessage write FRemoveConfirmMessage;
+    property RemoveConfirmTitle: TTranslateString read FRemoveConfirmTitle write FRemoveConfirmTitle;
+    property RemoveConfirmMessage: TTranslateString read FRemoveConfirmMessage write FRemoveConfirmMessage;
+    property TextHint: TTranslateString read FTextHint write SetTextHint;
     property ParentFont: boolean read FParentFont write SetParentFont default True;
     property ReadOnly: boolean read FReadOnly write SetReadOnly default False;
     property Enabled: boolean read FEnabled write SetEnabled;
@@ -239,6 +242,7 @@ begin
   FEditMinWidth := Scale(50);
   FRoundCorners := Scale(5);
   FAutoColorBrigtness := 80;
+  FTextHint := 'Enter new tag...';
 
   // Create inner edit control
   FEdit := TEdit.Create(Self);
@@ -246,6 +250,7 @@ begin
   begin
     FEdit.Parent := Self;
     FEdit.DoubleBuffered := FDoubleBuffered;
+    FEdit.TextHint := FTextHint;
     FEdit.BiDiMode := BiDiMode;
     FEdit.ParentFont := True;
     FEdit.BorderStyle := bsNone;
@@ -303,6 +308,13 @@ begin
   FColor := Value;
   if Assigned(FEdit) then
     FEdit.Color := Value;
+end;
+
+procedure TTagEdit.SetTextHint(Value: TTranslateString);
+begin
+  FTextHint := Value;
+  if Assigned(FEdit) then
+    FEdit.TextHint := Value;
 end;
 
 procedure TTagEdit.SetFont(Value: TFont);
@@ -1232,6 +1244,8 @@ begin
     begin
       Part1 := Trim(Copy(s, 1, Pos(':', s) - 1)) + ' ';
       Part2 := Trim(Copy(s, Pos(':', s) + 1, MaxInt));
+      if Trim(Part2) = string.Empty then
+        HasColon := False;
     end
     else
     begin
@@ -1241,6 +1255,7 @@ begin
 
     M := ATagHeight;
     W := ACanvas.TextWidth(s) + M;
+    if HasColon and (ACanvas.TextWidth(Part2) < ACanvas.TextWidth('...')) then W += ACanvas.TextWidth('.....');
 
     if (i > 0) and ((X + W) > AAvailWidth) then
     begin
@@ -1273,7 +1288,7 @@ begin
           if FTagColor <> clNone then
             Color1 := FTagColor
           else
-            Color1 := RandTagColor(Part1, FAutoColorBrigtness);
+            Color1 := RandTagColor(Trim(Part1), FAutoColorBrigtness);
         end;
       end;
 
@@ -1283,7 +1298,7 @@ begin
         if FTagSuffixColor <> clNone then
           Color2 := FTagSuffixColor
         else
-          Color2 := RandTagColor(Part2, FAutoColorBrigtness);
+          Color2 := RandTagColor(Trim(Part2), FAutoColorBrigtness);
       end;
 
       if Hover and (FTagHoverColor <> clNone) then
@@ -1341,7 +1356,7 @@ begin
           if FTagColor <> clNone then
             ACanvas.Brush.Color := FTagColor
           else
-            ACanvas.Brush.Color := RandTagColor(s, FAutoColorBrigtness);
+            ACanvas.Brush.Color := RandTagColor(Trim(s), FAutoColorBrigtness);
         end;
       end;
 
