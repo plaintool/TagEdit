@@ -27,6 +27,7 @@ uses
 
 type
   TTagEvent = procedure(Sender: TObject; const TagText: string) of object;
+  TTagReorderEvent = procedure(Sender: TObject; const TagText: string; const NewIndex: integer) of object;
   TTagPopupEvent = procedure(Sender: TObject; const TagText: string; var Handled: boolean) of object;
 
   TTagEdit = class(TCustomControl)
@@ -79,6 +80,7 @@ type
 
     FOnTagAdd: TTagEvent;
     FOnTagRemove: TTagEvent;
+    FOnTagReorder: TTagReorderEvent;
     FOnTagClick: TTagEvent;
     FOnTagPopup: TTagPopupEvent;
     FOnChange: TNotifyEvent;
@@ -184,11 +186,12 @@ type
 
     property Items: TStringList read GetTags write SetTags;
 
-    property OnTagAdd: TTagEvent read FOnTagAdd write FOnTagAdd;
-    property OnTagRemove: TTagEvent read FOnTagRemove write FOnTagRemove;
     property OnTagClick: TTagEvent read FOnTagClick write FOnTagClick;
     property OnTagPopup: TTagPopupEvent read FOnTagPopup write FOnTagPopup;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
+    property OnTagAdd: TTagEvent read FOnTagAdd write FOnTagAdd;
+    property OnTagRemove: TTagEvent read FOnTagRemove write FOnTagRemove;
+    property OnTagReorder: TTagReorderEvent read FOnTagReorder write FOnTagReorder;
     property OnClick;
     property OnDblClick;
     property OnMouseDown;
@@ -988,6 +991,8 @@ begin
         else
           FTags.Insert(FDropIndex, TempTag);
 
+        if Assigned(FOnTagReorder) then
+          FOnTagReorder(Self, TempTag, FDropIndex);
         if Assigned(FOnChange) then
           FOnChange(Self);
       end;
