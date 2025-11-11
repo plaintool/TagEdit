@@ -142,6 +142,7 @@ type
     function BlendColors(Color1, Color2: TColor; Intensity: integer): TColor;
     function GetTagsBitmap(ATags: TStringList; AFontSize, AWidth, AHeight: integer; ATagHeightDelta: integer = 0;
       ABlend: integer = 0; ABlendColor: TColor = clWhite): TBitmap;
+    property HoveredTag: string read GetHoveredTag;
   published
     property Align;
     property Anchors;
@@ -153,7 +154,6 @@ type
     property Height default 32;
     property Width default 300;
     property Tag default 0;
-    property HoveredTag: string read GetHoveredTag;
     property Color read FColor write SetColor default clWindow;
     property Font: TFont read FFont write SetFont;
     property AutoSizeHeight: boolean read FAutoSizeHeight write SetAutoSizeHeight default False;
