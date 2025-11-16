@@ -952,10 +952,18 @@ begin
     Key := 0;
   end
   else
-  if (Key = VK_ESCAPE) and (SelectedTags.Count > 0) then
+  if (Key = VK_ESCAPE) then
   begin
-    ClearSelection;
-    Key := 0;
+    if (SelectedTags.Count > 0) then
+    begin
+      ClearSelection;
+      Key := 0;
+    end;
+    if (FEdit.Text <> string.Empty) then
+    begin
+      FEdit.Text := string.Empty;
+      Key := 0;
+    end;
   end
   else if (FAllowSelect) and (ssCtrl in Shift) and (Key = VK_A) and (FEdit.Text = string.Empty) then
   begin
