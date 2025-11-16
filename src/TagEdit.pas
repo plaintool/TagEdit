@@ -946,10 +946,9 @@ begin
     Key := 0;
   end
   else
-  if (Key = VK_DELETE) then
+  if (Key = VK_DELETE) and (SelectedTags.Count > 0) then
   begin
-    if SelectedTags.Count > 0 then
-      RemoveSelectedTags;
+    RemoveSelectedTags;
     Key := 0;
   end
   else
