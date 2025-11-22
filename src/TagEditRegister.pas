@@ -18,11 +18,12 @@ procedure Register;
 
 implementation
 
-uses TagEdit;
+uses TagEdit, TagCheckPopup;
 
 procedure Register;
 begin
   RegisterComponents('Common Controls', [TTagEdit]);
+  RegisterComponents('Common Controls', [TCheckListButton]);
 end;
 
 initialization

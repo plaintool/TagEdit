@@ -60,6 +60,10 @@ SOFTWARE."/>
         <Filename Value="..\src\TagColorItems.pas"/>
         <UnitName Value="TagColorItems"/>
       </Item>
+      <Item>
+        <Filename Value="..\src\TagCheckPopup.pas"/>
+        <UnitName Value="TagCheckPopup"/>
+      </Item>
     </Files>
     <RequiredPkgs>
       <Item>
