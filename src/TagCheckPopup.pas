@@ -17,6 +17,11 @@ uses
 
 const
   MinHeight = 10;
+  {$IFDEF UNIX}
+  DefaultItemHeight = 23;
+  {$ELSE}
+  DefaultItemHeight = 17;
+  {$ENDIF}
 
 type
   TCheckBoxListClickEvent = procedure(Sender: TObject; Index: integer; Checked: boolean) of object;
@@ -541,7 +546,9 @@ begin
   begin
     ActualItemHeight := FPopupForm.CheckListBox.ItemHeight;
     if ActualItemHeight <= 0 then
-      ActualItemHeight := 17; // Default item height
+    begin
+      ActualItemHeight := Scale(DefaultItemHeight); // Default item height
+    end;
   end;
 
   // Calculate form height based on item count and DropDownCount
@@ -558,11 +565,11 @@ begin
     FormHeight := ActualItemHeight * MaxVisibleItems + 8; // 8 pixels for border
 
     // Ensure minimum height
-    if FormHeight < MinHeight then
-      FormHeight := MinHeight;
+    if FormHeight < Scale(MinHeight) then
+      FormHeight := Scale(MinHeight);
   end
   else
-    FormHeight := MinHeight; // Minimum height when no items
+    FormHeight := Scale(MinHeight); // Minimum height when no items
 
   // Show above control if not enough space below
   if P.Y + FormHeight > ScreenHeight then
