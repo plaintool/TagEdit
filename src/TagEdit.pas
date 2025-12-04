@@ -69,6 +69,7 @@ type
     FBackspaceEditTag: boolean;
     FReadOnly: boolean;
     FEnabled: boolean;
+    FUpdatePopup: boolean;
 
     FAutoColorBrigtness: integer;
     FAutoColorSaturation: integer;
@@ -838,10 +839,17 @@ begin
 end;
 
 procedure TCustomTagEdit.UpdateAutoHeight;
+var
+  OldHeight: integer;
 begin
   if FAutoSizeHeight and (not (Align in [alClient, alRight, alLeft])) then
   begin
+    OldHeight := Height;
     Height := CalculateAutoHeight;
+    if (Height <> OldHeight) then
+    begin
+      FUpdatePopup := True;
+    end;
   end;
 end;
 
@@ -918,6 +926,8 @@ begin
 
   SL := TStringList.Create;
   TagsToAdd := TStringList.Create;
+  FTags.OnChange := nil;
+  FEdit.Visible := False;
   try
     // Split by semicolon if present, otherwise add as single tag
     if Pos(';', ATag) > 0 then
@@ -961,6 +971,8 @@ begin
       end;
     end;
   finally
+    FEdit.Visible := True;
+    FTags.OnChange := @TagsChanged;
     SL.Free;
     TagsToAdd.Free;
   end;
@@ -999,6 +1011,8 @@ begin
 
   SL := TStringList.Create;
   TagsToRemove := TStringList.Create;
+  FTags.OnChange := nil;
+  FEdit.Visible := False;
   try
     // Split by semicolon if present, otherwise treat as single tag
     if Pos(';', ATag) > 0 then
@@ -1049,6 +1063,8 @@ begin
       end;
     end;
   finally
+    FEdit.Visible := True;
+    FTags.OnChange := @TagsChanged;
     SL.Free;
     TagsToRemove.Free;
   end;
@@ -1306,8 +1322,8 @@ procedure TCustomTagEdit.TagsChanged(Sender: TObject);
 begin
   FHoverIndex := -1; // Reset hover state when Items change
   Invalidate;
-  UpdateAutoHeight;
   UpdateCheckList;
+  UpdateAutoHeight;
 end;
 
 procedure TCustomTagEdit.SuggestedChanged(Sender: TObject);
@@ -1379,20 +1395,29 @@ procedure TCustomTagEdit.CheckListItemChecked(Sender: TObject; Index: integer; C
 begin
   if csDesigning in ComponentState then exit;
 
-  if not FCheckListInBulk then
+  if not FCheckListInBulk then // Single element
   begin
     if Checked then
       AddTag(FCheckListButton.Items[Index])
     else
       RemoveTag(FCheckListButton.Items[Index]);
+
+    try
+      Application.ProcessMessages;
+      if FUpdatePopup and FCheckListButton.PopupVisible then
+        FCheckListButton.UpdatePopupForm;
+    finally
+      FUpdatePopup := False;
+    end;
   end
-  else
+  else // Bulk check
   begin
     if Checked then
       FCheckListAdded += ';' + FCheckListButton.Items[Index]
     else
       FCheckListRemoved += ';' + FCheckListButton.Items[Index];
   end;
+
 end;
 
 procedure TCustomTagEdit.CheckListAfterBulkChange(Sender: TObject);
@@ -1404,7 +1429,12 @@ begin
         AddTag(FCheckListAdded);
       if Length(FCheckListRemoved) > 0 then
         RemoveTag(FCheckListRemoved);
+
+      Application.ProcessMessages;
+      if FUpdatePopup and FCheckListButton.PopupVisible then
+        FCheckListButton.UpdatePopupForm;
     finally
+      FUpdatePopup := False;
       FCheckListInBulk := False;
       FCheckListAdded := string.Empty;
       FCheckListRemoved := string.Empty;
@@ -1478,8 +1508,8 @@ begin
       FOnTagRemove(Sender, ATag);
     if Assigned(FOnChange) then
       FOnChange(Sender);
-    UpdateAutoHeight;
     Invalidate;
+    UpdateAutoHeight;
     Key := 0;
   end
   else

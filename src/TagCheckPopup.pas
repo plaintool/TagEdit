@@ -107,11 +107,13 @@ type
     destructor Destroy; override;
     procedure ShowPopupForm;
     procedure HidePopupForm;
+    procedure UpdatePopupForm;
     procedure ToggleSelectedChecks;
     procedure CheckAll;
     procedure UncheckAll;
     procedure Clear;
     function Scale(const AValue: integer): integer;
+    function PopupVisible: boolean;
     property Checked[Index: integer]: boolean read GetChecked write SetChecked;
     property CheckedByName[AName: string]: boolean read GetCheckedByName write SetCheckedByName;
     property ItemEnabled[Index: integer]: boolean read GetItemEnabled write SetItemEnabled;
@@ -519,15 +521,6 @@ begin
 end;
 
 procedure TCheckListButton.ShowPopupForm;
-var
-  Control: TControl;
-  P: TPoint;
-  ScreenHeight: integer;
-  FormHeight: integer;
-  ActualItemHeight: integer;
-  ItemCount: integer;
-  MaxVisibleItems: integer;
-  BorderDelta: integer;
 begin
   // Initialize form if needed
   InitializePopupForm;
@@ -537,18 +530,53 @@ begin
   if FClosing or ((FPopupEmpty = False) and (Items.Count = 0)) then
     Exit;
 
+  // Update styles before show
+  UpdatePopupStyles;
+
+  UpdatePopupForm;
+
+  Down := True;
+  FClosing := False;
+  FpopupForm.Font := self.Font;
+  FPopupForm.Show;
+  FPopupForm.BringToFront;
+
+  // Trigger OnDropDown event
+  if Assigned(FOnDropDown) then
+    FOnDropDown(Self);
+end;
+
+procedure TCheckListButton.HidePopupForm;
+begin
+  if not Assigned(FPopupForm) then Exit;
+
+  Down := False;
+  FClosing := True;
+  if FPopupForm.Visible then
+    FPopupForm.Hide;
+  FClosing := False;
+
+  // Trigger OnCloseUp event
+  if Assigned(FOnCloseUp) then
+    FOnCloseUp(Self);
+end;
+
+procedure TCheckListButton.UpdatePopupForm;
+var
+  Control: TControl;
+  P: TPoint;
+  FormHeight: integer;
+  ActualItemHeight: integer;
+  ItemCount: integer;
+  MaxVisibleItems: integer;
+  BorderDelta: integer;
+begin
   Control := FAttachedControl;
   if not Assigned(Control) then
     Control := Self;
 
-  // Update styles before show
-  UpdatePopupStyles;
-
   // Calculate position below attached control
   P := Control.ClientToScreen(Point(0, Control.Height));
-
-  // Check available space below
-  ScreenHeight := Screen.Height;
 
   // Determine actual item height
   if FItemHeight > 0 then
@@ -586,7 +614,7 @@ begin
     FormHeight := Scale(MinHeight); // Minimum height when no items
 
   // Show above control if not enough space below
-  if P.Y + FormHeight > ScreenHeight then
+  if P.Y + FormHeight > Screen.Height then
   begin
     P := Control.ClientToScreen(Point(0, -FormHeight));
     BorderDelta := ifthen(FPopupOpenTopDelta <> 0, FPopupOpenTopDelta, -2);
@@ -598,7 +626,7 @@ begin
 
   // Set form position and size
   FPopupForm.Top := P.Y + BorderDelta;
-  if not assigned(FAttachedControl) then
+  if not Assigned(FAttachedControl) then
   begin
     FPopupForm.Left := P.X + 1;
     FPopupForm.Width := Control.Parent.Width;
@@ -609,31 +637,6 @@ begin
     FPopupForm.Width := Control.Width + Self.Width + Scale(FPopupWidthDelta);
   end;
   FPopupForm.Height := FormHeight;
-
-  Down := True;
-  FClosing := False;
-  FpopupForm.Font := self.Font;
-  FPopupForm.Show;
-  FPopupForm.BringToFront;
-
-  // Trigger OnDropDown event
-  if Assigned(FOnDropDown) then
-    FOnDropDown(Self);
-end;
-
-procedure TCheckListButton.HidePopupForm;
-begin
-  if not Assigned(FPopupForm) then Exit;
-
-  Down := False;
-  FClosing := True;
-  if FPopupForm.Visible then
-    FPopupForm.Hide;
-  FClosing := False;
-
-  // Trigger OnCloseUp event
-  if Assigned(FOnCloseUp) then
-    FOnCloseUp(Self);
 end;
 
 procedure TCheckListButton.ToggleSelectedChecks;
@@ -874,6 +877,14 @@ end;
 function TCheckListButton.Scale(const AValue: integer): integer;
 begin
   Result := Scale96ToScreen(AValue);
+end;
+
+function TCheckListButton.PopupVisible: boolean;
+begin
+  Result := False;
+  InitializePopupForm;
+  if Assigned(FPopupForm) then
+    Result := FPopupForm.Showing;
 end;
 
 procedure TCheckListButton.SetAttachedControl(Value: TControl);
