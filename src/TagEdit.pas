@@ -139,6 +139,7 @@ type
 
     function RemovalConfirmed(idx: integer = -1): boolean;
     function TagAtPos(const P: TPoint): integer;
+    procedure SetFocusOnEdit;
     procedure UpdateEditPosition;
     procedure UpdateCheckList(AddSuggestions: boolean = True);
     procedure UpdateHoverState(X, Y: integer);
@@ -684,6 +685,11 @@ begin
     FCheckListButton.Glyph.Clear;
 end;
 
+procedure TCustomTagEdit.SetFocusOnEdit;
+begin
+  if Self.Visible and FEdit.Visible and FEdit.CanFocus then FEdit.SetFocus;
+end;
+
 procedure TCustomTagEdit.UpdateEditPosition;
 var
   LastRect: TRect;
@@ -1112,6 +1118,7 @@ begin
   begin
     FSelectedTags.Clear; // Clear selection
     Invalidate;
+    SetFocusOnEdit;
   end;
 end;
 
@@ -1484,6 +1491,7 @@ begin
       FOnChange(Sender);
 
     FTagEditing := string.Empty;
+    SetFocusOnEdit;
     Key := 0;
   end
   else
@@ -1550,6 +1558,7 @@ begin
       end;
       Key := 0;
     end;
+    SetFocusOnEdit;
   end
   else if (FAllowSelect) and (FEdit.Text = string.Empty) then
   begin
@@ -1600,8 +1609,7 @@ begin
   if FEdit.Text <> string.Empty then
   begin
     // Just ensure Edit has focus for text editing
-    if FEdit.CanFocus then
-      FEdit.SetFocus;
+    SetFocusOnEdit;
     Exit;
   end;
 
@@ -1678,10 +1686,7 @@ begin
   begin
     // Check if it was a simple click (minimal movement)
     if (Abs(GlobalPos.X - FMouseDownPos.X) <= Scale(2)) and (Abs(GlobalPos.Y - FMouseDownPos.Y) <= Scale(2)) then
-    begin
-      if FEdit.CanFocus then
-        FEdit.SetFocus;
-    end;
+      SetFocusOnEdit;
   end;
 
   // End selection if we were selecting
@@ -1689,7 +1694,7 @@ begin
   begin
     FSelecting := False;
     FEdit.Visible := Enabled and not ReadOnly;
-    if FEdit.Visible and FEdit.CanFocus then FEdit.SetFocus;
+    SetFocusOnEdit;
 
     FSelectionRect := Rect(0, 0, 0, 0);
     Invalidate;
@@ -1735,7 +1740,7 @@ begin
         begin
           RemoveTag(FTags[idx]);
           FMouseDownIndex := -1; // Reset since we handled it
-          if FEdit.Visible and FEdit.CanFocus then FEdit.SetFocus;
+          SetFocusOnEdit;
           exit;
         end
         else
@@ -1888,7 +1893,7 @@ begin
     begin
       FSelecting := False;
       FEdit.Visible := FEnabled and not FReadOnly;
-      if FEdit.Visible and FEdit.CanFocus then FEdit.SetFocus;
+      SetFocusOnEdit;
 
       // If selection rectangle is very small, treat as click
       DragThreshold := Scale(2);
@@ -2009,7 +2014,7 @@ begin
   begin
     FSelecting := False;
     FEdit.Visible := FEnabled and not FReadOnly;
-    if FEdit.Visible and FEdit.CanFocus then FEdit.SetFocus;
+    SetFocusOnEdit;
     FSelectionRect := Rect(0, 0, 0, 0);
     Invalidate;
   end
