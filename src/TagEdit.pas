@@ -175,6 +175,7 @@ type
     procedure EditMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
     procedure EditKeyDown(Sender: TObject; var Key: word; Shift: TShiftState);
     procedure SuggestedChanged(Sender: TObject);
+    procedure CheckListClick(Sender: TObject);
     procedure CheckListBeforeBulkChange(Sender: TObject);
     procedure CheckListItemChecked(Sender: TObject; Index: integer; Checked: boolean);
     procedure CheckListAfterBulkChange(Sender: TObject);
@@ -464,6 +465,7 @@ begin
     FCheckListButton.MultiSelect := True;
     FCheckListButton.DropDownCount := 15;
     FCheckListButton.AttachedControl := FEdit;
+    FCheckListButton.OnClick := @CheckListClick;
     FCheckListButton.OnItemChecked := @CheckListItemChecked;
     FCheckListButton.OnBeforeBulkChange := @CheckListBeforeBulkChange;
     FCheckListButton.OnAfterBulkChange := @CheckListAfterBulkChange;
@@ -685,7 +687,7 @@ end;
 procedure TCustomTagEdit.UpdateEditPosition;
 var
   LastRect: TRect;
-  NewLeft, NewTop: integer;
+  NewLeft, NewTop, NewTopScaled, OldTop: integer;
   AvailWidth: integer;
 begin
   if FUpdatingEdit or (csDesigning in ComponentState) then Exit;
@@ -721,15 +723,21 @@ begin
       NewTop := Scale(4);
     end;
 
+    {$IFDEF UNIX}
+    NewTopScaled := NewTop +Scale(1);
+    {$ELSE}
+    NewTopScaled := NewTop + Scale(3);
+    {$ENDIF}
+
     // Set position only when changed
-    if (FEdit.Left <> NewLeft) or (FEdit.Top <> NewTop) then
+    if (FEdit.Left <> NewLeft) or (FEdit.Top <> NewTopScaled) then
     begin
+      OldTop := FEdit.Top;
       FEdit.Left := NewLeft;
-      {$IFDEF UNIX}
-      FEdit.Top := NewTop +Scale(1);
-      {$ELSE}
-      FEdit.Top := NewTop + Scale(3);
-      {$ENDIF}
+      FEdit.Top := NewTopScaled;
+
+      if (not FAutoSizeHeight) and (FEdit.Top <> OldTop) then
+        FUpdatePopup := True;
     end;
 
     if (not FEdit.Visible) or (FSuggestedTags.Count = 0) then
@@ -1376,6 +1384,11 @@ begin
   UpdateCheckList(False);
   UpdateEditPosition;
   Invalidate;
+end;
+
+procedure TCustomTagEdit.CheckListClick(Sender: TObject);
+begin
+  FUpdatePopup := False;
 end;
 
 procedure TCustomTagEdit.CheckListBeforeBulkChange(Sender: TObject);

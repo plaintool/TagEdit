@@ -571,72 +571,79 @@ var
   MaxVisibleItems: integer;
   BorderDelta: integer;
 begin
-  Control := FAttachedControl;
-  if not Assigned(Control) then
-    Control := Self;
+  FPopupForm.CheckListBox.Enabled := False;
+  try
+    Control := FAttachedControl;
+    if not Assigned(Control) then
+      Control := Self;
 
-  // Calculate position below attached control
-  P := Control.ClientToScreen(Point(0, Control.Height));
+    // Calculate position below attached control
+    P := Control.ClientToScreen(Point(0, Control.Height));
 
-  // Determine actual item height
-  if FItemHeight > 0 then
-  begin
-    ActualItemHeight := FItemHeight;
-    FPopupForm.CheckListBox.ItemHeight := FItemHeight;
-  end
-  else
-  begin
-    ActualItemHeight := FPopupForm.CheckListBox.ItemHeight;
-    if ActualItemHeight <= 0 then
+    // Determine actual item height
+    if FItemHeight > 0 then
     begin
-      ActualItemHeight := Scale(DefaultItemHeight); // Default item height
-    end;
-  end;
-
-  // Calculate form height based on item count and DropDownCount
-  ItemCount := FPopupForm.CheckListBox.Items.Count;
-
-  if ItemCount > 0 then
-  begin
-    // Determine how many items to show
-    if (FDropDownCount > 0) and (ItemCount > FDropDownCount) then
-      MaxVisibleItems := FDropDownCount
+      ActualItemHeight := FItemHeight;
+      FPopupForm.CheckListBox.ItemHeight := FItemHeight;
+    end
     else
-      MaxVisibleItems := ItemCount;
+    begin
+      ActualItemHeight := FPopupForm.CheckListBox.ItemHeight;
+      if ActualItemHeight <= 0 then
+      begin
+        ActualItemHeight := Scale(DefaultItemHeight); // Default item height
+      end;
+    end;
 
-    FormHeight := ActualItemHeight * MaxVisibleItems + 8; // 8 pixels for border
+    // Calculate form height based on item count and DropDownCount
+    ItemCount := FPopupForm.CheckListBox.Items.Count;
 
-    // Ensure minimum height
-    if FormHeight < Scale(MinHeight) then
-      FormHeight := Scale(MinHeight);
-  end
-  else
-    FormHeight := Scale(MinHeight); // Minimum height when no items
+    if ItemCount > 0 then
+    begin
+      // Determine how many items to show
+      if (FDropDownCount > 0) and (ItemCount > FDropDownCount) then
+        MaxVisibleItems := FDropDownCount
+      else
+        MaxVisibleItems := ItemCount;
 
-  // Show above control if not enough space below
-  if P.Y + FormHeight > Screen.Height then
-  begin
-    P := Control.ClientToScreen(Point(0, -FormHeight));
-    BorderDelta := ifthen(FPopupOpenTopDelta <> 0, FPopupOpenTopDelta, -2);
-  end
-  else
-  begin
-    BorderDelta := ifthen(FPopupOpenBottomDelta <> 0, -FPopupOpenBottomDelta, 1);
+      FormHeight := ActualItemHeight * MaxVisibleItems + 8; // 8 pixels for border
+
+      // Ensure minimum height
+      if FormHeight < Scale(MinHeight) then
+        FormHeight := Scale(MinHeight);
+    end
+    else
+      FormHeight := Scale(MinHeight); // Minimum height when no items
+
+    // Show above control if not enough space below
+    if P.Y + FormHeight > Screen.Height then
+    begin
+      P := Control.ClientToScreen(Point(0, -FormHeight));
+      BorderDelta := ifthen(FPopupOpenTopDelta <> 0, FPopupOpenTopDelta, -2);
+    end
+    else
+    begin
+      BorderDelta := ifthen(FPopupOpenBottomDelta <> 0, -FPopupOpenBottomDelta, 1);
+    end;
+
+    // Set form position and size
+    FPopupForm.Top := P.Y + BorderDelta;
+    if not Assigned(FAttachedControl) then
+    begin
+      FPopupForm.Left := P.X + 1;
+      FPopupForm.Width := Control.Parent.Width;
+    end
+    else
+    begin
+      FPopupForm.Left := P.X - 2;
+      FPopupForm.Width := Control.Width + Self.Width + Scale(FPopupWidthDelta);
+    end;
+    FPopupForm.Height := FormHeight;
+  finally
+    FPopupForm.CheckListBox.Enabled := True;
+    if FPopupForm.Visible and FPopupForm.CheckListBox.CanFocus then
+      FPopupForm.CheckListBox.SetFocus;
   end;
-
-  // Set form position and size
-  FPopupForm.Top := P.Y + BorderDelta;
-  if not Assigned(FAttachedControl) then
-  begin
-    FPopupForm.Left := P.X + 1;
-    FPopupForm.Width := Control.Parent.Width;
-  end
-  else
-  begin
-    FPopupForm.Left := P.X - 2;
-    FPopupForm.Width := Control.Width + Self.Width + Scale(FPopupWidthDelta);
-  end;
-  FPopupForm.Height := FormHeight;
 end;
 
 procedure TCheckListButton.ToggleSelectedChecks;
