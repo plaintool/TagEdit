@@ -507,7 +507,7 @@ end;
 
 function TCustomTagEdit.GetTagHeight(AFontSize: integer = -1): integer;
 begin
-  Result := Scale(ifthen(AFontSize > -1, AFontSize, CoalesceInt(Font.Size, Screen.SystemFont.Size, 8)) * 2) + FTagHeightFactor;
+  Result := Scale(ifthen(AFontSize > -1, AFontSize, CoalesceInt(Font.Size, Screen.SystemFont.Size, 10)) * 2) + FTagHeightFactor;
 end;
 
 function TCustomTagEdit.GetTagRect(Index: integer): TRect;
@@ -899,7 +899,7 @@ procedure TCustomTagEdit.ScaleFontsPPI(const AToPPI: integer; const AProportion:
 begin
   inherited ScaleFontsPPI(AToPPI, AProportion);
   if ((not FParentFont) and (FFont.Size <= 0)) or ((FParentFont) and (Assigned(Parent)) and (Parent.Font.Size <= 0)) then
-    FFont.Size := CoalesceInt(Screen.SystemFont.Size, 8);
+    FFont.Size := CoalesceInt(Screen.SystemFont.Size, 10);
   DoScaleFontPPI(FFont, AToPPI, AProportion);
   if (Assigned(Parent)) and (FParentFont) then
     DoScaleFontPPI(Parent.Font, AToPPI, AProportion);
@@ -909,7 +909,7 @@ procedure TCustomTagEdit.FixDesignFontsPPI(const ADesignTimePPI: integer);
 begin
   inherited FixDesignFontsPPI(ADesignTimePPI);
   if ((not FParentFont) and (FFont.Size <= 0)) or ((FParentFont) and (Assigned(Parent)) and (Parent.Font.Size <= 0)) then
-    FFont.Size := CoalesceInt(Screen.SystemFont.Size, 8);
+    FFont.Size := CoalesceInt(Screen.SystemFont.Size, 10);
   DoFixDesignFontPPI(FFont, ADesignTimePPI);
   if (Assigned(Parent)) and (FParentFont) then
     DoFixDesignFontPPI(Parent.Font, ADesignTimePPI);
