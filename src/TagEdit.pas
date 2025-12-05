@@ -1562,7 +1562,7 @@ begin
   end
   else if (FAllowSelect) and (FEdit.Text = string.Empty) then
   begin
-    if (ssShift in Shift) and (Key = VK_LEFT) then
+    if (ssShift in Shift) and (Key in [VK_LEFT, VK_UP]) then
     begin
       ATag := GetLastUnselectedTag;
       if Length(ATag) > 0 then
@@ -1572,7 +1572,7 @@ begin
       end;
     end
     else
-    if (SelectedTags.Count > 0) and (ssShift in Shift) and (Key = VK_RIGHT) then
+    if (SelectedTags.Count > 0) and (ssShift in Shift) and (Key in [VK_RIGHT, VK_DOWN]) then
     begin
       idx := FSelectedTags.IndexOf(GetFirstSelectedTag);
       if idx >= 0 then
@@ -1582,13 +1582,14 @@ begin
       end;
     end
     else
-    if ((ssCtrl in Shift) and (Key = VK_A)) or ((ssShift in Shift) and (Key = VK_HOME)) then
+    if ((ssCtrl in Shift) and (Key = VK_A)) or ((ssShift in Shift) and (Key in [VK_HOME, VK_PRIOR])) then
     begin
       SelectAll;
       Key := 0;
     end
     else
-    if ((not (ssShift in Shift) and not (ssCtrl in Shift)) or ((ssShift in Shift) and (Key = VK_END))) and (SelectedTags.Count > 0) then
+    if ((not (ssShift in Shift) and not (ssCtrl in Shift)) or ((ssShift in Shift) and (Key in [VK_END, VK_NEXT]))) and
+      (SelectedTags.Count > 0) then
       ClearSelection;
   end;
 
