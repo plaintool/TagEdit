@@ -17,13 +17,13 @@ A versatile tag management control for Lazarus/FPC with advanced features.
   - Prevent duplicate tags
   - Multiple tag addition (semicolon-separated)
   - Programmatic tag management
-
+<!---->
 - **🔄 Drag & Drop**
   - Rearrange tags via intuitive drag-and-drop
   - Visual drop indicators
   - Smooth repositioning
   - Configurable reordering
-
+<!---->
 - **🎨 Customization**
   - Custom tag colors and hover effects
   - Adjustable border styles and widths
@@ -32,14 +32,14 @@ A versatile tag management control for Lazarus/FPC with advanced features.
   - Tag color collection, assigns colors based on tag name match
   - Font and size customization
   - High DPI/PPI scaling support
-
+<!---->
 - **📐 Smart Layout**
   - Automatic line wrapping
   - Dynamic edit box positioning
   - Optional auto-height adjustment
   - Responsive tag placement
   - Automatic height calculation
-
+<!---->
 - **⚡ Interactive Features**
   - Hover effects with customizable colors
   - Click events for individual tags
@@ -48,7 +48,7 @@ A versatile tag management control for Lazarus/FPC with advanced features.
   - Multi-tag selection support
   - Context menu integration
   - Clipboard operations
-
+<!---->
 - **⌨️ Keyboard Support**
   - Enter to add tags
   - Backspace to remove last tag
@@ -56,7 +56,7 @@ A versatile tag management control for Lazarus/FPC with advanced features.
   - Escape to clear selection/edit
   - Ctrl+A to select all tags
   - Focus management
-
+<!---->
 - **🎯 Selection System**
   - Multiple tag selection with mouse drag
   - Ctrl+Click for toggle selection
@@ -65,6 +65,17 @@ A versatile tag management control for Lazarus/FPC with advanced features.
   - Batch operations on selected tags
 
 ![sample](TagEditSample2.png)
+
+- **📋 Suggestions & Checklist**
+  - Built-in checklist popup for tag selection
+  - Suggested tags with checkbox interface
+  - Auto-suggest mode for automatic tag addition
+  - Sorted suggestion list
+  - Customizable suggestion button (glyph and caption)
+  - Flexible positioning (under edit box or control)
+  - Bulk tag operations from checklist
+
+![sample](TagEditSample3.png)
 
 ## Properties
 
@@ -78,6 +89,7 @@ A versatile tag management control for Lazarus/FPC with advanced features.
 | `AutoColorSaturation` | Integer | Saturation percentage for auto-generated tag colors (0-100) |
 | `AutoColorSeed` | LongWord | Seed for stable random color generation |
 | `AutoSizeHeight` | Boolean | Auto-adjust height based on content |
+| `AutoSuggest` | Boolean | Automatically add new tags to suggestions list |
 | `BackspaceEditTag` | Boolean | When pressing Backspace on empty edit, move last tag to edit box instead of removing |
 | `BorderColor` | TColor | Component border color |
 | `BorderWidth` | Integer | Component border width |
@@ -104,6 +116,11 @@ A versatile tag management control for Lazarus/FPC with advanced features.
 | `SelectionRectPenStyle` | TPenStyle | Pen style for selection rectangle |
 | `SelectionRectWidth` | Integer | Width of selection rectangle border |
 | `ShowHint` | Boolean | Show hint tooltips |
+| `SuggestedButtonCaption` | String | Caption for the suggestions button (default: "...") |
+| `SuggestedButtonGlyph` | TBitmap | Glyph/image for the suggestions button |
+| `SuggestedItems` | TStringList | Collection of suggested tags for the checklist |
+| `SuggestedItemsSorted` | Boolean | Sort the suggestions list alphabetically |
+| `SuggestedUnderEdit` | Boolean | Position suggestions popup under the edit box (default: True) |
 | `Tag` | Integer | User-defined tag value |
 | `TagBorderColor` | TColor | Border color of tags |
 | `TagBorderWidth` | Integer | Border width of tags |
@@ -120,6 +137,7 @@ A versatile tag management control for Lazarus/FPC with advanced features.
 
 | Event | Type | Description |
 |-------|------|-------------|
+| `OnBeforeChange` | TBeforeTagChangeEvent | Occurs before any tag operation (add, remove, reorder, checklist bulk change) |
 | `OnChange` | TNotifyEvent | Occurs when tags collection changes |
 | `OnClick` | TNotifyEvent | Occurs when component is clicked |
 | `OnDblClick` | TNotifyEvent | Occurs when component is double-clicked |
@@ -141,20 +159,24 @@ A versatile tag management control for Lazarus/FPC with advanced features.
 
 | Method | Description |
 |--------|-------------|
-| `AddTag(const ATag: string)` | Add a new tag to the collection |
+| `AddTag(const ATag: string; AEditing: boolean = False)` | Add a new tag to the collection |
 | `CalculateAutoHeight: Integer` | Calculate optimal height based on content |
 | `ClearSelection` | Clear current tag selection |
 | `CopyHoverText` | Copy hovered tag text to clipboard |
 | `FinishEdit` | Force completion of current edit operation |
 | `Focus: Boolean` | Check if control has focus |
+| `GetAutoColor(const ATag: string): TColor` | Get auto-generated color for a tag |
+| `GetFirstSelectedTag: string` | Get the first selected tag |
+| `GetLastUnselectedTag: string` | Get the last unselected tag |
 | `GetTagsBitmap(...): TBitmap` | Generate bitmap representation of tags |
-| `RemoveTag(const ATag: string; AConfirm: Boolean)` | Remove specific tag |
+| `RemoveTag(const ATag: string; AConfirm: boolean = False): boolean` | Remove specific tag |
 | `RemoveSelectedTags` | Remove all currently selected tags |
 | `SelectAll` | Select all tags in the control |
+| `SetFocus` | Set focus to the edit box |
 
 ## Installation
 
-## Method 1: Through IDE
+### Method 1: Through IDE
 1. Open Lazarus IDE
 2. Go to **Package** → **Open Package File (.lpk)**
 3. Navigate to `TagEdit\packages\TagEditPackage.lpk`
@@ -162,6 +184,11 @@ A versatile tag management control for Lazarus/FPC with advanced features.
 5. In the package window, click **Compile**
 6. After successful compilation, click **Use** → **Install**
 7. Restart Lazarus IDE
+
+### Method 2: Manual Installation
+1. Copy the `TagEdit` folder to your project directory
+2. Add the path to `TagEdit` in your project's search paths
+3. Add `TagEdit` to your uses clause
 
 ## After Installation
 - The component will appear in the palette under "Common Controls" tab
@@ -180,6 +207,16 @@ TagEdit1.Items.Add('Language:Pascal');
 TagEdit1.AutoSizeHeight := True;
 TagEdit1.AllowSelect := True;
 TagEdit1.AllowReorder := True;
+
+// Suggestions configuration
+TagEdit1.SuggestedItems.Add('Lazarus');
+TagEdit1.SuggestedItems.Add('FreePascal');
+TagEdit1.SuggestedItems.Add('Delphi');
+TagEdit1.SuggestedItems.Add('C++');
+TagEdit1.SuggestedItems.Sorted := True;
+TagEdit1.AutoSuggest := True; // Automatically add new tags to suggestions
+TagEdit1.SuggestedButtonCaption := 'Tags...';
+TagEdit1.SuggestedUnderEdit := True; // Position popup under edit box
 
 // Customize appearance
 TagEdit1.TagColor := clSkyBlue;
@@ -228,6 +265,18 @@ TagEdit1.RemoveTag('OldTag');
 TagEdit1.SelectAll;
 TagEdit1.RemoveSelectedTags;
 TagEdit1.ClearSelection;
+
+// Working with suggestions programmatically
+procedure TForm1.UpdateSuggestions;
+begin
+  TagEdit1.SuggestedItems.BeginUpdate;
+  try
+    TagEdit1.SuggestedItems.Clear;
+    TagEdit1.SuggestedItems.AddStrings(['Tag1', 'Tag2', 'Tag3']);
+  finally
+    TagEdit1.SuggestedItems.EndUpdate;
+  end;
+end;
 
 // Generate tag bitmap for preview
 var
