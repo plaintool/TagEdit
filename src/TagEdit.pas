@@ -894,16 +894,18 @@ end;
 
 procedure TCustomTagEdit.UpdateAutoHeight;
 var
-  OldHeight: integer;
+  OldHeight, NewHeight: integer;
 begin
   if FAutoSizeHeight and (not (Align in [alClient, alRight, alLeft])) then
   begin
     OldHeight := Height;
-    Height := CalculateAutoHeight;
+
+    NewHeight := CalculateAutoHeight;
+    if (NewHeight > 9999) then NewHeight := 9999;
+
+    Height := NewHeight;
     if (Height <> OldHeight) then
-    begin
       FUpdatePopup := True;
-    end;
   end;
 end;
 
