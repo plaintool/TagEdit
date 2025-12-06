@@ -118,6 +118,7 @@ type
     FOnTagPopup: TTagPopupEvent;
     FOnBeforeChange: TBeforeTagChangeEvent;
     FOnChange: TNotifyEvent;
+    FPrevParentFontChange: TNotifyEvent;
 
     function GetTags: TStringList;
     function GetTagHeight(AFontSize: integer = -1): integer;
@@ -499,6 +500,12 @@ end;
 
 destructor TCustomTagEdit.Destroy;
 begin
+  if (Parent <> nil) and (Parent.Font.OnChange = @ParentFontChange) then
+  begin
+    Parent.Font.OnChange := FPrevParentFontChange;
+    FPrevParentFontChange := nil;
+  end;
+
   FTags.Free;
   FFont.Free;
   FEdit.Free;
@@ -657,6 +664,7 @@ begin
     FEdit.Font.Assign(Parent.Font);
 
     // Subscribe to parent's font change manually
+    FPrevParentFontChange := Parent.Font.OnChange;
     Parent.Font.OnChange := @ParentFontChange;
 
     // Subscribe to font change
@@ -666,7 +674,7 @@ begin
   begin
     // Remove parent font change hook
     if Assigned(Parent) then
-      Parent.Font.OnChange := nil;
+      Parent.Font.OnChange := FPrevParentFontChange;
 
     // Copy font
     FEdit.Font.Assign(FFont);
@@ -1346,6 +1354,9 @@ end;
 
 procedure TCustomTagEdit.ParentFontChange(Sender: TObject);
 begin
+  if Assigned(FPrevParentFontChange) then
+    FPrevParentFontChange(Sender);
+
   if FParentFont and (Parent <> nil) then
   begin
     FFont.Assign(Parent.Font);
