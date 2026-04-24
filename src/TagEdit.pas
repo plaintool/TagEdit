@@ -249,6 +249,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure AfterConstruction; override;
     procedure SetFocus; override;
     procedure AddTag(const ATag: string; AEditing: boolean = False);
     function RemoveTag(const ATag: string; AConfirm: boolean = False): boolean;
@@ -382,8 +383,6 @@ begin
   FTagColors := TTagColorItems.Create(Self);
 
   FTags := TStringList.Create;
-  FTags.Add('IDE:Lazarus');
-  FTags.Add('Free Pascal');
   FTags.CaseSensitive := True;
   FTags.UseLocale := True;
   FTags.Options := [soUseLocale];
@@ -514,6 +513,18 @@ begin
   FCheckListButton.Free;
   FSuggestedTags.Free;
   inherited Destroy;
+end;
+
+procedure TCustomTagEdit.AfterConstruction;
+begin
+  inherited AfterConstruction;
+  if csDesigning in ComponentState then
+    if not (Owner is TCustomForm) or not (csLoading in TCustomForm(Owner).ComponentState) then
+      if FTags.Count = 0 then
+      begin
+        FTags.Add('IDE:Lazarus');
+        FTags.Add('Free Pascal');
+      end;
 end;
 
 procedure TCustomTagEdit.SetFocus;
