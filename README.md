@@ -300,15 +300,3 @@ begin
   end;
 end;
 ```
-## Donate 💖
-
-If you like TTagEdit and want to support its development, you can send a donation:
-
-| Currency | Network | Wallet Address |
-|----------|-----------------|----------------|
-| USDT     | Tron (TRC20)    | `TYSJJHjpu6aqr8UsGaCTLxDyh6HKWoNQ8k` |
-| USDT     | Ethereum (ERC20), Binance Smart Chain (BEP20) | `0x328e689E961c3Abb143835f8677947Fa9eaF9f6F` |
-| BTC      | Bitcoin (BTC)   | `bc1qp8m5j75yd58zhf9hl0a753shay093j2548f84e` |
-| ETH      | Ethereum (ERC20)| `0x328e689E961c3Abb143835f8677947Fa9eaF9f6F` |
-
-Every little help is appreciated! 🙏
