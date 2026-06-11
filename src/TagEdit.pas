@@ -31,7 +31,7 @@ type
   TTagEditOperation = (teoAdd, teoRemove, teoDrag, teoEdit, teoCheckListBulkChange);
 
 type
-  TTagEvent = procedure(Sender: TObject; const TagText: string) of object;
+  TTagEvent = procedure(Sender: TObject; const TagText: string; const TagIndex: integer = -1) of object;
   TTagReorderEvent = procedure(Sender: TObject; const TagText: string; const NewIndex: integer) of object;
   TTagPopupEvent = procedure(Sender: TObject; const TagText: string; var Handled: boolean) of object;
   TBeforeTagChangeEvent = procedure(Sender: TObject; Tags: string; Operation: TTagEditOperation; var AllowChange: boolean) of object;
@@ -249,10 +249,10 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure AfterConstruction; override;
     procedure SetFocus; override;
     procedure AddTag(const ATag: string; AEditing: boolean = False);
     function RemoveTag(const ATag: string; AConfirm: boolean = False): boolean;
+    procedure RemoveTagAtIndex(AIndex: integer; AConfirm: boolean = False);
     procedure RemoveSelectedTags;
     function Focused: boolean; override;
     function GetAutoColor(const ATag: string): TColor;
@@ -383,6 +383,8 @@ begin
   FTagColors := TTagColorItems.Create(Self);
 
   FTags := TStringList.Create;
+  FTags.Add('IDE:Lazarus');
+  FTags.Add('Free Pascal');
   FTags.CaseSensitive := True;
   FTags.UseLocale := True;
   FTags.Options := [soUseLocale];
@@ -513,18 +515,6 @@ begin
   FCheckListButton.Free;
   FSuggestedTags.Free;
   inherited Destroy;
-end;
-
-procedure TCustomTagEdit.AfterConstruction;
-begin
-  inherited AfterConstruction;
-  if csDesigning in ComponentState then
-    if not (Owner is TCustomForm) or not (csLoading in TCustomForm(Owner).ComponentState) then
-      if FTags.Count = 0 then
-      begin
-        FTags.Add('IDE:Lazarus');
-        FTags.Add('Free Pascal');
-      end;
 end;
 
 procedure TCustomTagEdit.SetFocus;
@@ -1126,7 +1116,7 @@ begin
 
           // Trigger individual tag remove event
           if Assigned(FOnTagRemove) then
-            FOnTagRemove(Self, s);
+            FOnTagRemove(Self, s, Index);
         end;
       end;
     end;
@@ -1149,6 +1139,34 @@ begin
   end
   else
     FEdit.Text := EditValue; // Restore original text if no tags removed
+end;
+
+procedure TCustomTagEdit.RemoveTagAtIndex(AIndex: integer; AConfirm: boolean = False);
+var
+  ATag: string;
+  AllowChange: boolean;
+begin
+  if (AIndex < 0) or (AIndex >= FTags.Count) then Exit;
+
+  if AConfirm and not RemovalConfirmed(AIndex) then Exit;
+
+  ATag := FTags[AIndex];
+  AllowChange := True;
+
+  if Assigned(FOnBeforeChange) then
+    FOnBeforeChange(Self, ATag, teoRemove, AllowChange);
+
+  if not AllowChange then Exit;
+
+  FTags.Delete(AIndex);
+
+  if Assigned(FOnTagRemove) then
+    FOnTagRemove(Self, ATag, AIndex);
+  if Assigned(FOnChange) then
+    FOnChange(Self);
+
+  TagsChanged(Self);
+  UpdateAutoHeight;
 end;
 
 procedure TCustomTagEdit.RemoveSelectedTags;
@@ -1588,7 +1606,7 @@ begin
       Repaint;
     end;
     if Assigned(FOnTagRemove) then
-      FOnTagRemove(Sender, ATag);
+      FOnTagRemove(Sender, ATag, FTags.Count);
     if Assigned(FOnChange) then
       FOnChange(Sender);
     Invalidate;
@@ -1801,7 +1819,7 @@ begin
       begin
         if RemovalConfirmed(idx) then
         begin
-          RemoveTag(FTags[idx]);
+          RemoveTagAtIndex(idx);
           FMouseDownIndex := -1; // Reset since we handled it
           SetFocusOnEdit;
           exit;
