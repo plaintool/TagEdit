@@ -6,6 +6,14 @@ A versatile tag management control for Lazarus/FPC with advanced features.
 [![Build with: Lazarus](https://img.shields.io/badge/Build_with-Lazarus-blueviolet)](https://www.lazarus-ide.org/)
 [![Platform: Windows Linux](https://img.shields.io/badge/Platform-Windows_Linux-yellow)](#)
 
+> **⚠️ Repository Moved**
+>
+> This project has moved to the **plainlib** GitHub organization:
+>
+> **https://github.com/plainlib/tagedit**
+>
+> Any future releases and updates will be published in the new repository.
+
 ![sample](TagEditSample.png)
 
 ## Features
